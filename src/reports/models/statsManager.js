@@ -62,8 +62,8 @@ async function calculateTrends(report) {
         trends.push({
             start_time: aggregatedReport.start_time,
             latency: aggregatedReport.aggregate.latency,
-            rps: aggregatedReport.aggregate.rps;
-        })
+            rps: aggregatedReport.aggregate.rps
+        });
     })
 
     return trends;
@@ -77,7 +77,7 @@ function filterRelevantReports(reports, arrivalRate, duration) {
     const relevantReports = reports.filter((report) => {
         const arrivalRateChange = Math.min(report.arrival_rate, arrivalRate) / Math.max(report.arrival_rate, arrivalRate);
         const durationRateChange = Math.min(report.duration, duration) / Math.max(report.duration, duration);
-        return durationRateChange >= 0.9 && arrivalRateChange >= configConsts.TREND_TRESHOLD && report.start_time >= minimumDate;
+        return durationRateChange >= 0.9 && arrivalRateChange >= configConsts.TREND_THRESHOLD && report.start_time >= minimumDate;
     });
     return relevantReports;
 }

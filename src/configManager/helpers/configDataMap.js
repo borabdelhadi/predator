@@ -48,7 +48,7 @@ const configDataMap = {
         type: 'json'
     },
     [constConfig.CUSTOM_RUNNER_DEFINITION]: { value: process.env.CUSTOM_RUNNER_DEFINITION, type: 'json' },
-    [constConfig.TREND_TRESHOLD]: { value: process.env.TREND_TRESHOLD || 0.9, type: 'float' },
+    [constConfig.TREND_THRESHOLD]: { value: process.env.TREND_THRESHOLD || 0.9, type: 'float' },
     [constConfig.TREND_BACK_IN_DAYS]: { value: process.env.TREND_BACK_IN_DAYS || 14, type: 'int' }
 
 
