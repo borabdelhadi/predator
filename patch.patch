@@ -1,0 +1,6781 @@
+Index: ui/src/features/redux/saga/reportsSagas.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/saga/reportsSagas.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/saga/reportsSagas.js	(date 1605641226480)
+@@ -9,10 +9,50 @@
+   createBenchmarkFromFramework,
+   editReportFromFramework,
+   getBenchmarkFromFramework,
+-  deleteReportFromFramework
++  deleteReportFromFramework,
++  getSummeryGraphFromFramework,
++  getGraphFromFramework
+ } from '../apis/reportsApi'
+ import { unAuthorizedHandler } from '../apis/apiUtils';
+ 
++export function * getGraphSummery ({ testId, reportId }) {
++  try {
++    // yield put(Actions.processingGetReports(true));
++    let response = yield call(getSummeryGraphFromFramework, testId, reportId);
++    let summery = response.data;
++
++    yield put(Actions.getGraphSummerySuccess(summery));
++    // yield put(Actions.processingGetReports(false));
++  } catch (e) {
++    if (!unAuthorizedHandler(e)) {
++      // yield put(Actions.getReportsFaliure(e));
++      yield put(Actions.processingGetReports(false));
++    }
++  }
++}
++
++export function * getGraph ({ requests = [] }) {
++  try {
++    // yield put(Actions.processingGetReports(true));
++    yield all(requests.map(function * ({ body, key }) {
++      console.log('body',body);
++      const response = yield call(getGraphFromFramework, body);
++      let graph = response.data;
++      yield put(Actions.getGraphSuccess(graph, key));
++    }))
++
++    // let response = yield call(getGraphFromFramework, body);
++    // let graph = response.data;
++    // yield put(Actions.getGraphsSuccess(graph, graphType));
++    // yield put(Actions.processingGetReports(false));
++  } catch (e) {
++    if (!unAuthorizedHandler(e)) {
++      // yield put(Actions.getReportsFaliure(e));
++      // yield put(Actions.processingGetReports(false));
++    }
++  }
++}
++
+ export function * getReports ({ testId }) {
+   try {
+     yield put(Actions.processingGetReports(true));
+@@ -153,4 +193,6 @@
+   yield takeLatest(Types.EDIT_REPORT, editReport);
+   yield takeLatest(Types.GET_BENCHMARK, getBenchmark);
+   yield takeLatest(Types.DELETE_REPORT, deleteReports);
++  yield takeLatest(Types.GET_GRAPH_SUMMERY, getGraphSummery);
++  yield takeLatest(Types.GET_GRAPHS, getGraph);
+ }
+Index: ui/src/features/redux/actions/reportsActions.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/actions/reportsActions.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/actions/reportsActions.js	(date 1605641226477)
+@@ -1,123 +1,137 @@
+ import * as Types from '../types/reportsTypes';
+ 
+ export const getReports = (testId) => (
+-    {type: Types.GET_REPORTS, testId}
++  { type: Types.GET_REPORTS, testId }
+ );
+ 
+ export const getLastReports = () => (
+-    {type: Types.GET_LAST_REPORTS}
++  { type: Types.GET_LAST_REPORTS }
+ );
+ 
+ export const getReportsSuccess = (reports) => (
+-    {type: Types.GET_REPORTS_SUCCESS, reports}
++  { type: Types.GET_REPORTS_SUCCESS, reports }
+ );
+ 
+ export const getReportsFaliure = (error) => (
+-    {type: Types.GET_REPORTS_FAILURE, error}
++  { type: Types.GET_REPORTS_FAILURE, error }
+ );
+ 
+ export const clearErrorOnGetReports = () => (
+-    {type: Types.CLEAR_ERROR_ON_GET_REPORTS}
++  { type: Types.CLEAR_ERROR_ON_GET_REPORTS }
+ );
+ 
+ export const clearReports = () => (
+-    {type: Types.CLEAR_REPORTS}
++  { type: Types.CLEAR_REPORTS }
+ );
+ 
+ export const getReport = (testId, runId) => (
+-    {type: Types.GET_REPORT, testId, runId}
++  { type: Types.GET_REPORT, testId, runId }
+ );
+ 
+ export const getReportSuccess = (report) => (
+-    {type: Types.GET_REPORT_SUCCESS, report}
++  { type: Types.GET_REPORT_SUCCESS, report }
+ );
+ 
+ export const getReportFailure = (error) => (
+-    {type: Types.GET_REPORT_FAILURE, error}
++  { type: Types.GET_REPORT_FAILURE, error }
+ );
+ 
+ export const clearSelectedReport = () => (
+-    {type: Types.CLEAR_SELECTED_REPORT}
++  { type: Types.CLEAR_SELECTED_REPORT }
+ );
+ 
+ export const processingGetReports = (state) => (
+-    {type: Types.PROCESSING_GET_REPORTS, state}
++  { type: Types.PROCESSING_GET_REPORTS, state }
+ );
+ 
+ export const processingGetReport = (state) => (
+-    {type: Types.PROCESSING_GET_REPORT, state}
++  { type: Types.PROCESSING_GET_REPORT, state }
+ );
+ 
+-
+ export const getAggregateReports = (reportsData) => (
+-    {type: Types.GET_AGGREGATE_REPORTS, reportsData}
++  { type: Types.GET_AGGREGATE_REPORTS, reportsData }
+ );
+ 
+ export const createBenchmark = (testId, body) => (
+-    {type: Types.CREATE_BENCHMARK, testId, body}
++  { type: Types.CREATE_BENCHMARK, testId, body }
+ );
+ 
+ export const createBenchmarkSuccess = (value) => (
+-    {type: Types.CREATE_BENCHMARK_SUCCESS, value}
++  { type: Types.CREATE_BENCHMARK_SUCCESS, value }
+ );
+ 
+ export const createBenchmarkFailure = (error) => (
+-    {type: Types.CREATE_BENCHMARK_FAILURE, error}
++  { type: Types.CREATE_BENCHMARK_FAILURE, error }
+ );
+ 
+-
+ export const getAggregateReportSuccess = (data) => (
+-    {type: Types.GET_AGGREGATE_REPORTS_SUCCESS, data}
++  { type: Types.GET_AGGREGATE_REPORTS_SUCCESS, data }
+ );
+ 
+ export const editReport = (testId, reportId, body) => (
+-    {type: Types.EDIT_REPORT, testId, reportId, body}
++  { type: Types.EDIT_REPORT, testId, reportId, body }
+ );
+ 
+ export const editReportSuccess = (value) => (
+-    {type: Types.EDIT_REPORT_SUCCESS, value}
++  { type: Types.EDIT_REPORT_SUCCESS, value }
+ );
+ 
+ export const editReportFailure = (error) => (
+-    {type: Types.EDIT_REPORT_FAILURE, error}
++  { type: Types.EDIT_REPORT_FAILURE, error }
+ );
+ 
+ export const deleteReports = (selectedReports) => (
+-    {type: Types.DELETE_REPORT, selectedReports}
++  { type: Types.DELETE_REPORT, selectedReports }
+ );
+ 
+ export const deleteReportSuccess = (numberOfDeletedReports) => (
+-    {type: Types.DELETE_REPORT_SUCCESS, numberOfDeletedReports}
++  { type: Types.DELETE_REPORT_SUCCESS, numberOfDeletedReports }
+ );
+ 
+ export const deleteReportFailure = (error) => (
+-    {type: Types.EDIT_REPORT_FAILURE, error}
++  { type: Types.EDIT_REPORT_FAILURE, error }
+ );
+ 
+ export const cleanAllReportsErrors = () => (
+-    {type: Types.CLEAN_ALL_ERRORS}
++  { type: Types.CLEAN_ALL_ERRORS }
+ );
+ 
+ export const addReportForCompare = (testId, reportId, value) => (
+-    {type: Types.ADD_REPORT_FOR_COMPARE, testId, reportId, value}
++  { type: Types.ADD_REPORT_FOR_COMPARE, testId, reportId, value }
+ );
+ 
+ export const clearSelectedReports = () => (
+-    {type: Types.CLEAR_SELECTED_REPORTS }
++  { type: Types.CLEAR_SELECTED_REPORTS }
+ );
+ 
+-
+ export const getBenchmarkSuccess = (data) => (
+-    {type: Types.GET_BENCHMARK_SUCCESS,data }
++  { type: Types.GET_BENCHMARK_SUCCESS, data }
+ );
+ 
+-
+ export const getBenchmark = (testId) => (
+-    {type: Types.GET_BENCHMARK,testId }
++  { type: Types.GET_BENCHMARK, testId }
+ );
+ 
+-
+ export const clearAggregateReportAndBenchmark = () => (
+-    {type: Types.CLEAR_AGGREGATE_REPORT_AND_BENCHMARK }
++  { type: Types.CLEAR_AGGREGATE_REPORT_AND_BENCHMARK }
+ );
+ 
++export const getGraphSummery = (testId, reportId) => (
++  { type: Types.GET_GRAPH_SUMMERY, testId, reportId }
++);
++
++export const getGraphSummerySuccess = (data) => (
++  { type: Types.GET_GRAPH_SUMMERY_SUCCESS, data }
++);
++
++export const getGraphs = (requests) => (
++  { type: Types.GET_GRAPHS, requests }
++);
++
++export const getGraphSuccess = (graph, graphType) => (
++  { type: Types.GET_GRAPH_SUCCESS, graph, graphType }
++);
++
++export const setGraphsFilter = (property, value) => (
++  { type: Types.SET_GRAPH_FILTER, property,value }
++);
+Index: ui/src/features/redux/types/reportsTypes.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/types/reportsTypes.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/types/reportsTypes.js	(date 1605641226483)
+@@ -17,12 +17,10 @@
+ export const GET_AGGREGATE_REPORTS_SUCCESS = 'GET_AGGREGATE_REPORTS_SUCCESS';
+ export const GET_AGGREGATE_REPORTS_FAILURE = 'GET_AGGREGATE_REPORTS_FAILURE';
+ 
+-
+ export const CREATE_BENCHMARK = 'CREATE_BENCHMARK';
+ export const CREATE_BENCHMARK_SUCCESS = 'CREATE_BENCHMARK_SUCCESS';
+ export const CREATE_BENCHMARK_FAILURE = 'CREATE_BENCHMARK_FAILURE';
+ 
+-
+ export const EDIT_REPORT = 'EDIT_REPORT';
+ export const EDIT_REPORT_SUCCESS = 'EDIT_REPORT_SUCCESS';
+ export const EDIT_REPORT_FAILURE = 'EDIT_REPORT_FAILURE';
+@@ -31,16 +29,19 @@
+ export const DELETE_REPORT_SUCCESS = 'DELETE_REPORT_SUCCESS';
+ export const DELETE_REPORT_FAILURE = 'DELETE_REPORT_FAILURE';
+ 
+-
+ export const CLEAN_ALL_ERRORS = 'CLEAN_ALL_ERRORS';
+ 
+-
+ export const ADD_REPORT_FOR_COMPARE = 'ADD_REPORT_FOR_COMPARE';
+ export const CLEAR_SELECTED_REPORTS = 'CLEAR_SELECTED_REPORTS';
+ 
+-
+ export const GET_BENCHMARK = 'GET_BENCHMARK';
+ export const GET_BENCHMARK_SUCCESS = 'GET_BENCHMARK_SUCCESS';
+ 
+ export const CLEAR_AGGREGATE_REPORT_AND_BENCHMARK = 'CLEAR_AGGREGATE_REPORT_AND_BENCHMARK';
+ 
++export const GET_GRAPH_SUMMERY = 'GET_GRAPH_SUMMERY';
++export const GET_GRAPH_SUMMERY_SUCCESS = 'GET_GRAPH_SUMMERY_SUCCESS';
++export const GET_GRAPHS = 'GET_GRAPHS';
++export const GET_GRAPH_SUCCESS = 'GET_GRAPH_SUCCESS';
++
++export const SET_GRAPH_FILTER = 'SET_GRAPH_FILTER';
+Index: package-lock.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- package-lock.json	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ package-lock.json	(date 1605641226459)
+@@ -205,7 +205,7 @@
+     },
+     "@babel/runtime": {
+       "version": "7.11.2",
+-      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.11.2.tgz",
++      "resolved": "http://npm.zooz.co:8083/@babel%2fruntime/-/runtime-7.11.2.tgz",
+       "integrity": "sha512-TeWkU52so0mPtDcaCTxNBI/IHiz0pZgr8VEFqXFtZWpYD08ZB6FaSwVAS8MKRQAP3bYKiVjwysOJgMFY28o6Tw==",
+       "dev": true,
+       "requires": {
+@@ -329,13 +329,13 @@
+         },
+         "ansi-regex": {
+           "version": "5.0.0",
+-          "resolved": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-5.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/ansi-regex/-/ansi-regex-5.0.0.tgz",
+           "integrity": "sha512-bY6fj56OUQ0hU1KjFNDQuJFezqKdrAyFdIevADiqrWHwSlbmBNMHp5ak2f40Pm8JTFyM2mqxkG6ngkHO11f/lg==",
+           "dev": true
+         },
+         "ansi-styles": {
+           "version": "4.2.1",
+-          "resolved": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-4.2.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/ansi-styles/-/ansi-styles-4.2.1.tgz",
+           "integrity": "sha512-9VGjrMsG1vePxcSweQsN20KY/c4zN0h9fLjqAbwbPfahM3t+NL+M9HC8xeXG2I8pX5NoamTGNuomEUFI7fcUjA==",
+           "dev": true,
+           "requires": {
+@@ -345,13 +345,13 @@
+         },
+         "camelcase": {
+           "version": "5.3.1",
+-          "resolved": "https://registry.npmjs.org/camelcase/-/camelcase-5.3.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/camelcase/-/camelcase-5.3.1.tgz",
+           "integrity": "sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==",
+           "dev": true
+         },
+         "chalk": {
+           "version": "4.1.0",
+-          "resolved": "https://registry.npmjs.org/chalk/-/chalk-4.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/chalk/-/chalk-4.1.0.tgz",
+           "integrity": "sha512-qwx12AxXe2Q5xQ43Ac//I6v5aXTipYrSESdOgzrN+9XjgEpyjpKuvSGaN4qE93f7TQTlerQQ8S+EQ0EyDoVL1A==",
+           "dev": true,
+           "requires": {
+@@ -361,7 +361,7 @@
+         },
+         "cliui": {
+           "version": "6.0.0",
+-          "resolved": "https://registry.npmjs.org/cliui/-/cliui-6.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/cliui/-/cliui-6.0.0.tgz",
+           "integrity": "sha512-t6wbgtoCXvAzst7QgXxJYqPt0usEfbgQdftEPbLL/cvv6HPE5VgvqCuAIDR0NgU52ds6rFwqrgakNLrHEjCbrQ==",
+           "dev": true,
+           "requires": {
+@@ -372,7 +372,7 @@
+         },
+         "color-convert": {
+           "version": "2.0.1",
+-          "resolved": "https://registry.npmjs.org/color-convert/-/color-convert-2.0.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/color-convert/-/color-convert-2.0.1.tgz",
+           "integrity": "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==",
+           "dev": true,
+           "requires": {
+@@ -381,13 +381,13 @@
+         },
+         "color-name": {
+           "version": "1.1.4",
+-          "resolved": "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz",
++          "resolved": "http://npm.zooz.co:8083/color-name/-/color-name-1.1.4.tgz",
+           "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==",
+           "dev": true
+         },
+         "core-js": {
+           "version": "3.6.5",
+-          "resolved": "https://registry.npmjs.org/core-js/-/core-js-3.6.5.tgz",
++          "resolved": "http://npm.zooz.co:8083/core-js/-/core-js-3.6.5.tgz",
+           "integrity": "sha512-vZVEEwZoIsI+vPEuoF9Iqf5H7/M3eeQqWlQnYa8FSKKePuYTf5MWnxb5SDAzCa60b3JBRS5g9b+Dq7b1y/RCrA==",
+           "dev": true
+         },
+@@ -406,13 +406,13 @@
+         },
+         "emoji-regex": {
+           "version": "8.0.0",
+-          "resolved": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/emoji-regex/-/emoji-regex-8.0.0.tgz",
+           "integrity": "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==",
+           "dev": true
+         },
+         "find-up": {
+           "version": "4.1.0",
+-          "resolved": "https://registry.npmjs.org/find-up/-/find-up-4.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/find-up/-/find-up-4.1.0.tgz",
+           "integrity": "sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==",
+           "dev": true,
+           "requires": {
+@@ -422,19 +422,19 @@
+         },
+         "has-flag": {
+           "version": "4.0.0",
+-          "resolved": "https://registry.npmjs.org/has-flag/-/has-flag-4.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/has-flag/-/has-flag-4.0.0.tgz",
+           "integrity": "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==",
+           "dev": true
+         },
+         "is-fullwidth-code-point": {
+           "version": "3.0.0",
+-          "resolved": "https://registry.npmjs.org/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz",
+           "integrity": "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==",
+           "dev": true
+         },
+         "locate-path": {
+           "version": "5.0.0",
+-          "resolved": "https://registry.npmjs.org/locate-path/-/locate-path-5.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/locate-path/-/locate-path-5.0.0.tgz",
+           "integrity": "sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==",
+           "dev": true,
+           "requires": {
+@@ -443,7 +443,7 @@
+         },
+         "p-locate": {
+           "version": "4.1.0",
+-          "resolved": "https://registry.npmjs.org/p-locate/-/p-locate-4.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/p-locate/-/p-locate-4.1.0.tgz",
+           "integrity": "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A==",
+           "dev": true,
+           "requires": {
+@@ -452,7 +452,7 @@
+         },
+         "parse-json": {
+           "version": "5.0.1",
+-          "resolved": "https://registry.npmjs.org/parse-json/-/parse-json-5.0.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/parse-json/-/parse-json-5.0.1.tgz",
+           "integrity": "sha512-ztoZ4/DYeXQq4E21v169sC8qWINGpcosGv9XhTDvg9/hWvx/zrFkc9BiWxR58OJLHGk28j5BL0SDLeV2WmFZlQ==",
+           "dev": true,
+           "requires": {
+@@ -464,19 +464,19 @@
+         },
+         "path-exists": {
+           "version": "4.0.0",
+-          "resolved": "https://registry.npmjs.org/path-exists/-/path-exists-4.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/path-exists/-/path-exists-4.0.0.tgz",
+           "integrity": "sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==",
+           "dev": true
+         },
+         "path-type": {
+           "version": "4.0.0",
+-          "resolved": "https://registry.npmjs.org/path-type/-/path-type-4.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/path-type/-/path-type-4.0.0.tgz",
+           "integrity": "sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==",
+           "dev": true
+         },
+         "string-width": {
+           "version": "4.2.0",
+-          "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/string-width/-/string-width-4.2.0.tgz",
+           "integrity": "sha512-zUz5JD+tgqtuDjMhwIg5uFVV3dtqZ9yQJlZVfq4I01/K5Paj5UHj7VyrQOJvzawSVlKpObApbfD0Ed6yJc+1eg==",
+           "dev": true,
+           "requires": {
+@@ -487,7 +487,7 @@
+         },
+         "strip-ansi": {
+           "version": "6.0.0",
+-          "resolved": "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/strip-ansi/-/strip-ansi-6.0.0.tgz",
+           "integrity": "sha512-AuvKTrTfQNYNIctbR1K/YGTR1756GycPsg7b9bdV9Duqur4gv6aKqHXah67Z8ImS7WEz5QVcOtlfW2rZEugt6w==",
+           "dev": true,
+           "requires": {
+@@ -496,7 +496,7 @@
+         },
+         "supports-color": {
+           "version": "7.1.0",
+-          "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/supports-color/-/supports-color-7.1.0.tgz",
+           "integrity": "sha512-oRSIpR8pxT1Wr2FquTNnGet79b3BWljqOuoW/h4oBhxJ/HUbX5nX6JSruTkvXDCFMwDPvsaTTbvMLKZWSy0R5g==",
+           "dev": true,
+           "requires": {
+@@ -505,7 +505,7 @@
+         },
+         "wrap-ansi": {
+           "version": "6.2.0",
+-          "resolved": "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-6.2.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/wrap-ansi/-/wrap-ansi-6.2.0.tgz",
+           "integrity": "sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==",
+           "dev": true,
+           "requires": {
+@@ -516,7 +516,7 @@
+         },
+         "yargs": {
+           "version": "15.4.1",
+-          "resolved": "https://registry.npmjs.org/yargs/-/yargs-15.4.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/yargs/-/yargs-15.4.1.tgz",
+           "integrity": "sha512-aePbxDmcYW++PaqBsJ+HYUFwCdv4LVvdnhBy78E57PIor8/OVvhMrADFFEDh8DHDFRv/O9i3lPhsENjO7QX0+A==",
+           "dev": true,
+           "requires": {
+@@ -535,7 +535,7 @@
+         },
+         "yargs-parser": {
+           "version": "18.1.3",
+-          "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-18.1.3.tgz",
++          "resolved": "http://npm.zooz.co:8083/yargs-parser/-/yargs-parser-18.1.3.tgz",
+           "integrity": "sha512-o50j0JeToy/4K6OZcaQmW6lyXXKhq7csREXcDwk2omFPJEwUNOVtJKvmDr9EI1fAJZUyZcRF7kxGBWmRXudrCQ==",
+           "dev": true,
+           "requires": {
+@@ -597,7 +597,7 @@
+         },
+         "ansi-styles": {
+           "version": "4.2.1",
+-          "resolved": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-4.2.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/ansi-styles/-/ansi-styles-4.2.1.tgz",
+           "integrity": "sha512-9VGjrMsG1vePxcSweQsN20KY/c4zN0h9fLjqAbwbPfahM3t+NL+M9HC8xeXG2I8pX5NoamTGNuomEUFI7fcUjA==",
+           "dev": true,
+           "requires": {
+@@ -607,7 +607,7 @@
+         },
+         "chalk": {
+           "version": "4.1.0",
+-          "resolved": "https://registry.npmjs.org/chalk/-/chalk-4.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/chalk/-/chalk-4.1.0.tgz",
+           "integrity": "sha512-qwx12AxXe2Q5xQ43Ac//I6v5aXTipYrSESdOgzrN+9XjgEpyjpKuvSGaN4qE93f7TQTlerQQ8S+EQ0EyDoVL1A==",
+           "dev": true,
+           "requires": {
+@@ -617,7 +617,7 @@
+         },
+         "color-convert": {
+           "version": "2.0.1",
+-          "resolved": "https://registry.npmjs.org/color-convert/-/color-convert-2.0.1.tgz",
++          "resolved": "http://npm.zooz.co:8083/color-convert/-/color-convert-2.0.1.tgz",
+           "integrity": "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==",
+           "dev": true,
+           "requires": {
+@@ -626,19 +626,19 @@
+         },
+         "color-name": {
+           "version": "1.1.4",
+-          "resolved": "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz",
++          "resolved": "http://npm.zooz.co:8083/color-name/-/color-name-1.1.4.tgz",
+           "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==",
+           "dev": true
+         },
+         "has-flag": {
+           "version": "4.0.0",
+-          "resolved": "https://registry.npmjs.org/has-flag/-/has-flag-4.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/has-flag/-/has-flag-4.0.0.tgz",
+           "integrity": "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==",
+           "dev": true
+         },
+         "supports-color": {
+           "version": "7.1.0",
+-          "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.1.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/supports-color/-/supports-color-7.1.0.tgz",
+           "integrity": "sha512-oRSIpR8pxT1Wr2FquTNnGet79b3BWljqOuoW/h4oBhxJ/HUbX5nX6JSruTkvXDCFMwDPvsaTTbvMLKZWSy0R5g==",
+           "dev": true,
+           "requires": {
+@@ -665,7 +665,7 @@
+         },
+         "semver": {
+           "version": "7.3.2",
+-          "resolved": "https://registry.npmjs.org/semver/-/semver-7.3.2.tgz",
++          "resolved": "http://npm.zooz.co:8083/semver/-/semver-7.3.2.tgz",
+           "integrity": "sha512-OrOb32TeeambH6UrhtShmF7CRDqhL6/5XpPNp2DuRH6+9QLw/orhp72j87v8Qa1ScDkvrrBNpZcDejAirJmfXQ==",
+           "dev": true
+         }
+@@ -943,7 +943,7 @@
+         },
+         "path-exists": {
+           "version": "4.0.0",
+-          "resolved": "https://registry.npmjs.org/path-exists/-/path-exists-4.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/path-exists/-/path-exists-4.0.0.tgz",
+           "integrity": "sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==",
+           "dev": true
+         }
+@@ -2935,7 +2935,7 @@
+         },
+         "dot-prop": {
+           "version": "5.2.0",
+-          "resolved": "https://registry.npmjs.org/dot-prop/-/dot-prop-5.2.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/dot-prop/-/dot-prop-5.2.0.tgz",
+           "integrity": "sha512-uEUyaDKoSQ1M4Oq8l45hSE26SnTxL6snNnqvK/VWx5wJhmff5z0FUVJDKDanor/6w3kzE3i7XZOk+7wC0EXr1A==",
+           "requires": {
+             "is-obj": "^2.0.0"
+@@ -2943,14 +2943,14 @@
+         },
+         "is-obj": {
+           "version": "2.0.0",
+-          "resolved": "https://registry.npmjs.org/is-obj/-/is-obj-2.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/is-obj/-/is-obj-2.0.0.tgz",
+           "integrity": "sha512-drqDG3cbczxxEJRoOXcOjtdp1J/lyp1mNn0xaznRs8+muBhgQcrnbspox5X5fOw0HnMnbfDzvnEMEtqDEJEo8w=="
+         }
+       }
+     },
+     "conventional-changelog-angular": {
+       "version": "5.0.11",
+-      "resolved": "https://registry.npmjs.org/conventional-changelog-angular/-/conventional-changelog-angular-5.0.11.tgz",
++      "resolved": "http://npm.zooz.co:8083/conventional-changelog-angular/-/conventional-changelog-angular-5.0.11.tgz",
+       "integrity": "sha512-nSLypht/1yEflhuTogC03i7DX7sOrXGsRn14g131Potqi6cbGbGEE9PSDEHKldabB6N76HiSyw9Ph+kLmC04Qw==",
+       "dev": true,
+       "requires": {
+@@ -2960,7 +2960,7 @@
+       "dependencies": {
+         "compare-func": {
+           "version": "2.0.0",
+-          "resolved": "https://registry.npmjs.org/compare-func/-/compare-func-2.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/compare-func/-/compare-func-2.0.0.tgz",
+           "integrity": "sha512-zHig5N+tPWARooBnb0Zx1MFcdfpyJrfTJ3Y5L+IFvUm8rM74hHz66z0gw0x4tijh5CorKkKUCnW82R2vmpeCRA==",
+           "dev": true,
+           "requires": {
+@@ -2970,7 +2970,7 @@
+         },
+         "dot-prop": {
+           "version": "5.2.0",
+-          "resolved": "https://registry.npmjs.org/dot-prop/-/dot-prop-5.2.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/dot-prop/-/dot-prop-5.2.0.tgz",
+           "integrity": "sha512-uEUyaDKoSQ1M4Oq8l45hSE26SnTxL6snNnqvK/VWx5wJhmff5z0FUVJDKDanor/6w3kzE3i7XZOk+7wC0EXr1A==",
+           "dev": true,
+           "requires": {
+@@ -2979,7 +2979,7 @@
+         },
+         "is-obj": {
+           "version": "2.0.0",
+-          "resolved": "https://registry.npmjs.org/is-obj/-/is-obj-2.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/is-obj/-/is-obj-2.0.0.tgz",
+           "integrity": "sha512-drqDG3cbczxxEJRoOXcOjtdp1J/lyp1mNn0xaznRs8+muBhgQcrnbspox5X5fOw0HnMnbfDzvnEMEtqDEJEo8w==",
+           "dev": true
+         }
+@@ -3330,7 +3330,7 @@
+     },
+     "conventional-changelog-jshint": {
+       "version": "2.0.8",
+-      "resolved": "https://registry.npmjs.org/conventional-changelog-jshint/-/conventional-changelog-jshint-2.0.8.tgz",
++      "resolved": "http://npm.zooz.co:8083/conventional-changelog-jshint/-/conventional-changelog-jshint-2.0.8.tgz",
+       "integrity": "sha512-hB/iI0IiZwnZ+seYI+qEQ4b+EMQSEC8jGIvhO2Vpz1E5p8FgLz75OX8oB1xJWl+s4xBMB6f8zJr0tC/BL7YOjw==",
+       "dev": true,
+       "requires": {
+@@ -3340,7 +3340,7 @@
+       "dependencies": {
+         "compare-func": {
+           "version": "2.0.0",
+-          "resolved": "https://registry.npmjs.org/compare-func/-/compare-func-2.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/compare-func/-/compare-func-2.0.0.tgz",
+           "integrity": "sha512-zHig5N+tPWARooBnb0Zx1MFcdfpyJrfTJ3Y5L+IFvUm8rM74hHz66z0gw0x4tijh5CorKkKUCnW82R2vmpeCRA==",
+           "dev": true,
+           "requires": {
+@@ -3350,7 +3350,7 @@
+         },
+         "dot-prop": {
+           "version": "5.2.0",
+-          "resolved": "https://registry.npmjs.org/dot-prop/-/dot-prop-5.2.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/dot-prop/-/dot-prop-5.2.0.tgz",
+           "integrity": "sha512-uEUyaDKoSQ1M4Oq8l45hSE26SnTxL6snNnqvK/VWx5wJhmff5z0FUVJDKDanor/6w3kzE3i7XZOk+7wC0EXr1A==",
+           "dev": true,
+           "requires": {
+@@ -3359,7 +3359,7 @@
+         },
+         "is-obj": {
+           "version": "2.0.0",
+-          "resolved": "https://registry.npmjs.org/is-obj/-/is-obj-2.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/is-obj/-/is-obj-2.0.0.tgz",
+           "integrity": "sha512-drqDG3cbczxxEJRoOXcOjtdp1J/lyp1mNn0xaznRs8+muBhgQcrnbspox5X5fOw0HnMnbfDzvnEMEtqDEJEo8w==",
+           "dev": true
+         }
+@@ -6236,7 +6236,7 @@
+     },
+     "git-raw-commits": {
+       "version": "2.0.7",
+-      "resolved": "https://registry.npmjs.org/git-raw-commits/-/git-raw-commits-2.0.7.tgz",
++      "resolved": "http://npm.zooz.co:8083/git-raw-commits/-/git-raw-commits-2.0.7.tgz",
+       "integrity": "sha512-SkwrTqrDxw8y0G1uGJ9Zw13F7qu3LF8V4BifyDeiJCxSnjRGZD9SaoMiMqUvvXMXh6S3sOQ1DsBN7L2fMUZW/g==",
+       "dev": true,
+       "requires": {
+@@ -6249,7 +6249,7 @@
+       "dependencies": {
+         "dargs": {
+           "version": "7.0.0",
+-          "resolved": "https://registry.npmjs.org/dargs/-/dargs-7.0.0.tgz",
++          "resolved": "http://npm.zooz.co:8083/dargs/-/dargs-7.0.0.tgz",
+           "integrity": "sha512-2iy1EkLdlBzQGvbweYRFxmFath8+K7+AKB0TlhHWkNuH+TmovaMH/Wp7V7R4u7f4SnX3OgLsU9t1NI9ioDnUpg==",
+           "dev": true
+         }
+@@ -8086,7 +8086,7 @@
+         },
+         "yargs-parser": {
+           "version": "18.1.3",
+-          "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-18.1.3.tgz",
++          "resolved": "http://npm.zooz.co:8083/yargs-parser/-/yargs-parser-18.1.3.tgz",
+           "integrity": "sha512-o50j0JeToy/4K6OZcaQmW6lyXXKhq7csREXcDwk2omFPJEwUNOVtJKvmDr9EI1fAJZUyZcRF7kxGBWmRXudrCQ==",
+           "dev": true,
+           "requires": {
+@@ -10132,7 +10132,7 @@
+     },
+     "regenerator-runtime": {
+       "version": "0.13.7",
+-      "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.13.7.tgz",
++      "resolved": "http://npm.zooz.co:8083/regenerator-runtime/-/regenerator-runtime-0.13.7.tgz",
+       "integrity": "sha512-a54FxoJDIr27pgf7IgeQGxmqUNYrcV338lf/6gH456HZ/PhX+5BcwHXG9ajESmwe6WRO0tAzRUrRmNONWgkrew==",
+       "dev": true
+     },
+Index: ui/src/features/components/Report/CloudGraph.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/components/Report/CloudGraph.js	(date 1605641226474)
++++ ui/src/features/components/Report/CloudGraph.js	(date 1605641226474)
+@@ -0,0 +1,159 @@
++import React, { PureComponent } from 'react';
++import Card from '../../../components/Card';
++import { BiaxialLineChart, TableSummery } from './Charts';
++import * as selectors from '../../redux/selectors/reportsSelector';
++import * as Actions from '../../redux/actions/reportsActions';
++import { connect } from 'react-redux';
++import { graphSummery } from '../../redux/selectors/reportsSelector';
++import Button from '../../../components/Button';
++import { buildGraphRpsQuery, buildGeneralRpsGraphRequest, buildGeneralLatencyGraphRequest, buildGraphLatencyQuery } from './utils';
++
++class CloudGraph extends PureComponent {
++  constructor (props) {
++    super(props);
++    this.state = {
++      selectedRow: {},
++      graphRequests: this.generalRequests()
++
++    }
++  }
++
++  generalRequests = () => {
++    return [
++      { body: buildGeneralRpsGraphRequest(this.props.report), key: 'rps' },
++      { body: buildGeneralLatencyGraphRequest(this.props.report, 50), key: 'p50' },
++      { body: buildGeneralLatencyGraphRequest(this.props.report, 90), key: 'p90' },
++      { body: buildGeneralLatencyGraphRequest(this.props.report, 95), key: 'p95' },
++      { body: buildGeneralLatencyGraphRequest(this.props.report, 99), key: 'p99' }
++    ]
++  }
++  onSelectedRow= (data, value) => {
++    const { report = {}, getGraphs } = this.props;
++    const { selectedRow } = this.state;
++    const NewSelectedRow = { ...selectedRow, [data.id]: value && data }
++    this.setState({ selectedRow: NewSelectedRow })
++    const queryParameters = Object.values(NewSelectedRow).filter((value) => value)
++    let graphRpsBody, graphP50Body, graphRequests, graphP90Body, graphP95Body, graphP99Body;
++    if (queryParameters.length) {
++      graphRpsBody = buildGraphRpsQuery(report, queryParameters);
++      graphP50Body = buildGraphLatencyQuery(report, 50, queryParameters);
++      graphP90Body = buildGraphLatencyQuery(report, 90, queryParameters);
++      graphP95Body = buildGraphLatencyQuery(report, 95, queryParameters);
++      graphP99Body = buildGraphLatencyQuery(report, 99, queryParameters);
++      graphRequests = [{ body: graphRpsBody, key: 'rps' },
++        { body: graphP50Body, key: 'p50' },
++        { body: graphP90Body, key: 'p90' },
++        { body: graphP95Body, key: 'p95' },
++        { body: graphP99Body, key: 'p99' }
++      ];
++    } else {
++      graphRequests = this.generalRequests()
++    }
++
++    // const graphRequests =
++    this.setState({graphRequests}, () => {
++      getGraphs(graphRequests);
++      // getGraph(graphP50Body, 'p50');
++    })
++    this.setLoadDataInterval();
++  }
++
++  updateFilter = (property) => {
++    this.props.setGraphsFilter(property, !this.props.filters[property])
++  }
++
++  render () {
++    console.log('prometheusData', this.props.prometheusData);
++    const { selectedRow } = this.state;
++    const { graphSummery, prometheusData, filters } = this.props;
++    return (
++      <>
++        <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++          <h3>LATENCY-RPS</h3>
++          {/* <LineChartPredator data={prometheusData.values} keys={prometheusData.keys} */}
++          {/*  labelY={'ms'} graphType={'latency'} */}
++          {/*  onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter} */}
++          {/*  filteredKeys={filteredKeys} /> */}
++          <div style={{ alignSelf: 'flex-end', marginBottom: '10px' }}>
++            <Button width={'40px'} style={{ minWidth: '0px', padding: '0px', marginRight: '5px' }} hover
++              inverted={!filters.rps}
++              onClick={() => this.updateFilter('rps')}>rps</Button>
++            <Button width={'40px'} style={{ minWidth: '0px', padding: '0px', marginRight: '5px' }} hover
++              inverted={!filters.p50}
++              onClick={() => this.updateFilter('p50')}>p50</Button>
++            <Button width={'40px'} style={{ minWidth: '0px', padding: '0px', marginRight: '5px' }} hover
++              // disabled={report.status !== 'finished'}
++              inverted={!filters.p90}
++              onClick={() => this.updateFilter('p90')}>p90</Button>
++            <Button width={'40px'} style={{ minWidth: '0px', padding: '0px', marginRight: '5px' }} hover
++              inverted={!filters.p95}
++              onClick={() => this.updateFilter('p95')}>p95</Button>
++            <Button width={'40px'} style={{ minWidth: '0px', padding: '0px', marginRight: '5px' }} hover
++              inverted={!filters.p99}
++              onClick={() => this.updateFilter('p99')}>p99</Button>
++          </div>
++
++          <BiaxialLineChart labelLeft={'latency mills'} labelRight={'rp/s'} data={prometheusData.values} keysLeft={prometheusData.latencyKeys} keysRight={prometheusData.rpsKeys} />
++        </Card>
++        <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++          <TableSummery onSelectedRow={this.onSelectedRow} selectedRow={selectedRow} data={graphSummery} />
++        </Card>
++      </>
++    )
++  }
++
++  loadData=() => {
++    const { getGraphSummery, report, getGraphs } = this.props;
++    const { graphRequests } = this.state;
++    getGraphSummery(report.test_id, report.report_id)
++
++    getGraphs(graphRequests);
++  }
++  componentDidMount () {
++    // todo consider filters
++    // const body = {
++    //   status_code: data.status_code,
++    //   request_names: data.request_name,
++    //   type: 'requests_latency',
++    //   test_id: report.test_id,
++    //   report_id: report.report_id
++    // }
++    this.loadData();
++    this.setLoadDataInterval();
++  }
++  setLoadDataInterval=() => {
++    this.interval && clearInterval(this.interval);
++    this.interval = setInterval(() => {
++      this.loadData();
++    }, 30000)
++  }
++  componentWillUnmount () {
++    this.interval && clearInterval(this.interval);
++  }
++}
++
++function mapStateToProps (state) {
++  return {
++    // aggregateReport: selectors.getAggregateReport(state),
++    // createBenchmarkSucceed: selectors.createBenchmarkSuccess(state),
++    // editReportSuccess: selectors.editReportSuccess(state),
++    prometheusData: selectors.prometheusData(state),
++    graphSummery: selectors.graphSummeryData(state),
++    filters: selectors.filters(state)
++  }
++}
++
++const mapDispatchToProps = {
++  setGraphsFilter: Actions.setGraphsFilter,
++  getGraphs: Actions.getGraphs,
++  getGraphSummery: Actions.getGraphSummery,
++  createBenchmark: Actions.createBenchmark,
++  createBenchmarkSuccess: Actions.createBenchmarkSuccess,
++  getBenchmark: Actions.getBenchmark,
++  clearAggregateReportAndBenchmark: Actions.clearAggregateReportAndBenchmark,
++  editReport: Actions.editReport,
++  getReport: Actions.getReport,
++  setEditReportSuccess: Actions.editReportSuccess
++};
++
++export default connect(mapStateToProps, mapDispatchToProps)(CloudGraph);
+Index: ui/src/features/components/Report/utils.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/components/Report/utils.js	(date 1605641226476)
++++ ui/src/features/components/Report/utils.js	(date 1605641226476)
+@@ -0,0 +1,68 @@
++
++export const buildGraphLatencyQuery = (report, p, graphsParameters) => {
++  const result = graphsParameters.reduce((acc, cur) => {
++    acc.requestNames.push(cur.request_name);
++    acc.statusCodes.push(cur.status_code);
++    return acc;
++  }, { requestNames: [], statusCodes: [] });
++
++  const body = {
++    test_id: report.test_id,
++    report_id: report.report_id,
++    type: 'requests_latency',
++    percentile: p,
++    phases: ['total'],
++    status_codes: result.statusCodes,
++    request_names: result.requestNames,
++    dimensions: ['request_name', 'status_code']
++  }
++
++  return body;
++}
++
++export const buildGraphRpsQuery = (report, graphsParameters) => {
++  const result = graphsParameters.reduce((acc, cur) => {
++    acc.requestNames.push(cur.request_name);
++    acc.statusCodes.push(cur.status_code);
++    return acc;
++  }, { requestNames: [], statusCodes: [] });
++
++  const body = {
++    test_id: report.test_id,
++    report_id: report.report_id,
++    type: 'requests_by_endpoint',
++    status_codes: result.statusCodes,
++    request_names: result.requestNames,
++    dimensions: ['request_name', 'status_code']
++  };
++
++  return body;
++}
++
++export const buildGeneralLatencyGraphRequest = (report, p) => {
++  const body = {
++    test_id: report.test_id,
++    report_id: report.report_id,
++    type: 'requests_latency',
++    phases: ['total'],
++    percentile: p
++  };
++
++  return body;
++}
++export const buildGeneralRpsGraphRequest = (report) => {
++  const body = {
++    test_id: report.test_id,
++    report_id: report.report_id,
++    type: 'requests_by_endpoint'
++  };
++
++  return body;
++}
++
++export const buildGraphSummeryRequest = (data) => {
++  return {
++    test_id: '7abb1d73-fdc8-4b86-9419-af5effb7e288',
++    report_id: '984f27b7-96a1-4e2b-bbef-67401d53dfe7'
++  }
++}
+Index: ui/src/features/redux/reducers/reportsReducer.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/reducers/reportsReducer.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/reducers/reportsReducer.js	(date 1605641226479)
+@@ -2,76 +2,111 @@
+ import * as Types from '../types/reportsTypes'
+ 
+ const initialState = Immutable.Map({
+-    reports: [],
+-    report: undefined,
+-    processing_get_reports: false,
+-    error_get_reports: undefined,
+-    error_get_report: undefined,
+-    create_benchmark_success: false,
+-    edit_report_success: false,
+-    edit_report_failure: undefined,
+-    create_benchmark_failure: undefined,
+-    selected_reports: {},
+-    aggregate_reports: [],
+-    benchmark: undefined,
+-    delete_report_success: false
++  reports: [],
++  report: undefined,
++  processing_get_reports: false,
++  error_get_reports: undefined,
++  error_get_report: undefined,
++  create_benchmark_success: false,
++  edit_report_success: false,
++  edit_report_failure: undefined,
++  create_benchmark_failure: undefined,
++  selected_reports: {},
++  aggregate_reports: [],
++  benchmark: undefined,
++  delete_report_success: false,
++  graph_summery: [],
++  graph_rps: [],
++  graph_p50: [],
++  graph_p95: [],
++  graph_p99: [],
++  graph_p90: [],
++  filters: {
++    p90: true,
++    p95: true,
++    p99: true,
++    p50: true,
++    rps: true
++  }
+ });
+ 
+-export default function reduce(state = initialState, action = {}) {
+-    switch (action.type) {
+-        case Types.GET_REPORTS_FAILURE:
+-            return state.set('error_get_reports', action.error);
+-        case Types.GET_REPORTS_SUCCESS:
+-            return state.set('reports', action.reports);
+-        case Types.CLEAR_REPORTS:
+-            return state.set('reports', undefined);
+-        case Types.CLEAR_ERROR_ON_GET_REPORTS:
+-            return state.set('error_get_reports', undefined);
+-        case Types.GET_REPORT_FAILURE:
+-            return state.set('error_get_report', action.error);
+-        case Types.GET_REPORT_SUCCESS:
+-            return state.set('report', action.report);
+-        case Types.PROCESSING_GET_REPORTS:
+-            return state.set('processing_get_reports', action.state);
+-        case Types.PROCESSING_GET_REPORT:
+-            return state.set('processing_get_report', action.state);
+-        case Types.CLEAR_SELECTED_REPORT:
+-            return state.set('report', undefined);
+-        case Types.GET_AGGREGATE_REPORTS_SUCCESS:
+-            return state.set('aggregate_reports', action.data);
+-        case Types.CREATE_BENCHMARK_SUCCESS:
+-            return state.set('create_benchmark_success', action.value);
+-        case Types.EDIT_REPORT_SUCCESS:
+-            return state.set('edit_report_success', action.value);
+-        case Types.EDIT_REPORT_FAILURE:
+-            return state.set('edit_report_failure', action.error);
+-        case Types.DELETE_REPORT_SUCCESS:
+-            return state.set('delete_report_success', action.numberOfDeletedReports);
+-        case Types.DELETE_REPORT_FAILURE:
+-            return state.set('delete_report_failure', action.error);
+-        case Types.CREATE_BENCHMARK_FAILURE:
+-            return state.set('create_benchmark_failure', action.error);
+-        case Types.ADD_REPORT_FOR_COMPARE:
+-            const currentSelectedReports = JSON.parse(JSON.stringify(state.get('selected_reports')));
+-            currentSelectedReports[action.testId] = currentSelectedReports[action.testId] || {};
+-            currentSelectedReports[action.testId][action.reportId] = action.value;
+-            return state.set('selected_reports', currentSelectedReports);
+-        case Types.CLEAR_SELECTED_REPORTS:
+-            return state.set('selected_reports', {});
+-        case Types.CLEAN_ALL_ERRORS:
+-            const newState = (state.set('error_get_reports', undefined)
+-                .set('error_get_reports', undefined)
+-                .set('delete_report_failure', undefined)
+-                .set('edit_report_failure', undefined)
+-                .set('create_benchmark_failure', undefined));
++export default function reduce (state = initialState, action = {}) {
++  switch (action.type) {
++  case Types.GET_REPORTS_FAILURE:
++    return state.set('error_get_reports', action.error);
++  case Types.GET_REPORTS_SUCCESS:
++    return state.set('reports', action.reports);
++  case Types.CLEAR_REPORTS:
++    return state.set('reports', undefined);
++  case Types.CLEAR_ERROR_ON_GET_REPORTS:
++    return state.set('error_get_reports', undefined);
++  case Types.GET_REPORT_FAILURE:
++    return state.set('error_get_report', action.error);
++  case Types.GET_REPORT_SUCCESS:
++    return state.set('report', action.report);
++  case Types.PROCESSING_GET_REPORTS:
++    return state.set('processing_get_reports', action.state);
++  case Types.PROCESSING_GET_REPORT:
++    return state.set('processing_get_report', action.state);
++  case Types.CLEAR_SELECTED_REPORT:
++    return state.set('report', undefined);
++  case Types.GET_AGGREGATE_REPORTS_SUCCESS:
++    return state.set('aggregate_reports', action.data);
++  case Types.CREATE_BENCHMARK_SUCCESS:
++    return state.set('create_benchmark_success', action.value);
++  case Types.EDIT_REPORT_SUCCESS:
++    return state.set('edit_report_success', action.value);
++  case Types.EDIT_REPORT_FAILURE:
++    return state.set('edit_report_failure', action.error);
++  case Types.DELETE_REPORT_SUCCESS:
++    return state.set('delete_report_success', action.numberOfDeletedReports);
++  case Types.DELETE_REPORT_FAILURE:
++    return state.set('delete_report_failure', action.error);
++  case Types.CREATE_BENCHMARK_FAILURE:
++    return state.set('create_benchmark_failure', action.error);
++  case Types.ADD_REPORT_FOR_COMPARE:
++    const currentSelectedReports = JSON.parse(JSON.stringify(state.get('selected_reports')));
++    currentSelectedReports[action.testId] = currentSelectedReports[action.testId] || {};
++    currentSelectedReports[action.testId][action.reportId] = action.value;
++    return state.set('selected_reports', currentSelectedReports);
++  case Types.CLEAR_SELECTED_REPORTS:
++    return state.set('selected_reports', {});
++  case Types.CLEAN_ALL_ERRORS:
++    const newState = (state.set('error_get_reports', undefined)
++      .set('error_get_reports', undefined)
++      .set('delete_report_failure', undefined)
++      .set('edit_report_failure', undefined)
++      .set('create_benchmark_failure', undefined));
+ 
+-            return newState;
+-        case Types.GET_BENCHMARK_SUCCESS:
+-            return state.set('benchmark', action.data);
+-        case Types.CLEAR_AGGREGATE_REPORT_AND_BENCHMARK:
+-            return state.set('aggregate_reports', [])
+-                .set('benchmark', undefined);
+-        default:
+-            return state;
+-    }
++    return newState;
++  case Types.GET_BENCHMARK_SUCCESS:
++    return state.set('benchmark', action.data);
++  case Types.CLEAR_AGGREGATE_REPORT_AND_BENCHMARK:
++    return state.set('aggregate_reports', [])
++      .set('benchmark', undefined);
++
++  case Types.GET_GRAPH_SUMMERY_SUCCESS:
++    return state.set('graph_summery', action.data)
++
++  case Types.GET_GRAPH_SUCCESS:
++    return state.set(`graph_${action.graphType}`, action.graph);
++  case Types.SET_GRAPH_FILTER:
++    const filters = {...state.get('filters')};
++    filters[action.property] = action.value;
++    return state.set('filters', filters);
++    //
++    // const graphsData = state.get('graph_rps');
++    // console.log('action',action)
++    // if (graphsData[action.requestIdentity]) {
++    //   graphsData[action.requestIdentity][action.graphType] = action.graph;
++    // } else {
++    //   graphsData[action.requestIdentity] = { [action.graphType]: action.graph }
++    // }
++    // console.log('graphsData',graphsData)
++    //
++    // return state.set('graphs', graphsData)
++
++  default:
++    return state;
++  }
+ }
+Index: ui/src/features/redux/selectors/reportsSelector.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/selectors/reportsSelector.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/selectors/reportsSelector.js	(date 1605641226482)
+@@ -1,6 +1,6 @@
+ import dateFormat from 'dateformat';
+ import { createSelector } from 'reselect'
+-
++import { sortBy } from 'lodash';
+ export const reports = (state) => state.ReportsReducer.get('reports');
+ export const aggregateReport = (state) => state.ReportsReducer.get('aggregate_reports');
+ export const errorOnGetReports = (state) => state.ReportsReducer.get('error_get_reports');
+@@ -16,3939 +16,174 @@
+ export const editReportFailure = (state) => state.ReportsReducer.get('edit_report_failure');
+ export const selectedReports = (state) => state.ReportsReducer.get('selected_reports');
+ export const benchmark = (state) => state.ReportsReducer.get('benchmark');
+-export const prometheusReports = (state) => state.ReportsReducer.get('prometheus_reports');
++// export const prometheusReports = (state) => state.ReportsReducer.get('prometheus_reports');
++export const graphSummery = (state) => state.ReportsReducer.get('graph_summery');
++export const graphs = (state) => state.ReportsReducer.get('graphs');
++export const graphRps = (state) => state.ReportsReducer.get('graph_rps');
++export const graphP50 = (state) => state.ReportsReducer.get('graph_p50');
++export const graphP90 = (state) => state.ReportsReducer.get('graph_p90');
++export const graphP95 = (state) => state.ReportsReducer.get('graph_p95');
++export const graphP99 = (state) => state.ReportsReducer.get('graph_p99');
++export const filters = (state) => state.ReportsReducer.get('filters');
+ 
+-export const prometheusData = createSelector(prometheusReports, (prometheusResult) => {
+-  const mock = [
+-    {
+-      metric: {
+-        path: 'GET http://internal.eks-mars-pci.zooz.co/pci-api-gateway/tokens/{{ tokenId }}',
+-        status_code: '200'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '1.8666666666666667'
+-        ],
+-        [
+-          1603145895,
+-          '2.3666666666666667'
+-        ],
+-        [
+-          1603145955,
+-          '1.8332722242591912'
+-        ],
+-        [
+-          1603146015,
+-          '2.7'
+-        ],
+-        [
+-          1603146075,
+-          '2.566666666666667'
+-        ],
+-        [
+-          1603146135,
+-          '2.2666666666666666'
+-        ],
+-        [
+-          1603146195,
+-          '2.1'
+-        ],
+-        [
+-          1603146255,
+-          '2.466666666666667'
+-        ],
+-        [
+-          1603146315,
+-          '1.8333944464815495'
+-        ],
+-        [
+-          1603146375,
+-          '2.033333333333333'
+-        ],
+-        [
+-          1603146435,
+-          '1.9666666666666666'
+-        ],
+-        [
+-          1603146495,
+-          '2.2333333333333334'
+-        ],
+-        [
+-          1603146555,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603146615,
+-          '2.2666666666666666'
+-        ],
+-        [
+-          1603146675,
+-          '2.233407780259342'
+-        ],
+-        [
+-          1603146735,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603146795,
+-          '2.5'
+-        ],
+-        [
+-          1603146855,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603146915,
+-          '2.366745558185273'
+-        ],
+-        [
+-          1603146975,
+-          '2.3666666666666667'
+-        ],
+-        [
+-          1603147035,
+-          '2.0332655578147394'
+-        ],
+-        [
+-          1603147095,
+-          '1.6666666666666667'
+-        ],
+-        [
+-          1603147155,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603147215,
+-          '1.8332722242591912'
+-        ],
+-        [
+-          1603147275,
+-          '2.3666666666666667'
+-        ],
+-        [
+-          1603147335,
+-          '2.433333333333333'
+-        ],
+-        [
+-          1603147395,
+-          '1.9741024525713522'
+-        ],
+-        [
+-          1603147455,
+-          '1.8333333333333333'
+-        ],
+-        [
+-          1603147515,
+-          '2.3334111137037903'
+-        ],
+-        [
+-          1603147575,
+-          '2.633245558481384'
+-        ],
+-        [
+-          1603147635,
+-          '2.533333333333333'
+-        ],
+-        [
+-          1603147695,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603147755,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603147815,
+-          '2.2333333333333334'
+-        ],
+-        [
+-          1603147875,
+-          '1.6333877795926532'
+-        ],
+-        [
+-          1603147935,
+-          '2.2666666666666666'
+-        ],
+-        [
+-          1603147995,
+-          '2'
+-        ],
+-        [
+-          1603148055,
+-          '2.1666666666666665'
+-        ],
+-        [
+-          1603148115,
+-          '2.133404446814894'
+-        ],
+-        [
+-          1603148175,
+-          '2.3'
+-        ],
+-        [
+-          1603148235,
+-          '2.5'
+-        ],
+-        [
+-          1603148295,
+-          '2.1667388912963768'
+-        ],
+-        [
+-          1603148355,
+-          '2.4'
+-        ],
+-        [
+-          1603148415,
+-          '2'
+-        ],
+-        [
+-          1603148475,
+-          '2.6666666666666665'
+-        ],
+-        [
+-          1603148535,
+-          '2.4999166694443518'
+-        ],
+-        [
+-          1603148595,
+-          '2.4673246198986396'
+-        ],
+-        [
+-          1603148655,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603148715,
+-          '2.433333333333333'
+-        ],
+-        [
+-          1603148775,
+-          '1.6999433352221591'
+-        ],
+-        [
+-          1603148835,
+-          '2.4999166694443518'
+-        ],
+-        [
+-          1603148895,
+-          '1.9999333355554814'
+-        ],
+-        [
+-          1603148955,
+-          '2.9334311143704794'
+-        ],
+-        [
+-          1603149015,
+-          '1.8'
+-        ],
+-        [
+-          1603149075,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603149135,
+-          '2.3332555581480614'
+-        ],
+-        [
+-          1603149195,
+-          '1.9'
+-        ],
+-        [
+-          1603149255,
+-          '2.2666666666666666'
+-        ],
+-        [
+-          1603149315,
+-          '1.7336222703783963'
+-        ],
+-        [
+-          1603149375,
+-          '2.1666666666666665'
+-        ],
+-        [
+-          1603149435,
+-          '1.8333333333333333'
+-        ],
+-        [
+-          1603149495,
+-          '1.6333333333333333'
+-        ],
+-        [
+-          1603149555,
+-          '1.8'
+-        ],
+-        [
+-          1603149615,
+-          '1.8'
+-        ],
+-        [
+-          1603149675,
+-          '1.4996500816476155'
+-        ],
+-        [
+-          1603149735,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603149795,
+-          '2.466666666666667'
+-        ],
+-        [
+-          1603149855,
+-          '2.3666666666666667'
+-        ],
+-        [
+-          1603149915,
+-          '2.0128149216679527'
+-        ],
+-        [
+-          1603149975,
+-          '2.2333333333333334'
+-        ],
+-        [
+-          1603150035,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603150095,
+-          '2.1'
+-        ],
+-        [
+-          1603150155,
+-          '1.9666666666666666'
+-        ],
+-        [
+-          1603150215,
+-          '1.7666666666666666'
+-        ],
+-        [
+-          1603150275,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603150335,
+-          '2'
+-        ],
+-        [
+-          1603150395,
+-          '2.1'
+-        ],
+-        [
+-          1603150455,
+-          '2.6666666666666665'
+-        ],
+-        [
+-          1603150515,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603150575,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603150635,
+-          '2.6333333333333333'
+-        ],
+-        [
+-          1603150695,
+-          '2.3332555581480614'
+-        ],
+-        [
+-          1603150755,
+-          '2.42097253925434'
+-        ],
+-        [
+-          1603150815,
+-          '2.066597780073997'
+-        ],
+-        [
+-          1603150875,
+-          '2.2333333333333334'
+-        ],
+-        [
+-          1603150935,
+-          '2.3'
+-        ],
+-        [
+-          1603150995,
+-          '2.134115842475574'
+-        ],
+-        [
+-          1603151055,
+-          '1.9'
+-        ],
+-        [
+-          1603151115,
+-          '2.2'
+-        ],
+-        [
+-          1603151175,
+-          '2.5'
+-        ],
+-        [
+-          1603151235,
+-          '1.9333977799259978'
+-        ],
+-        [
+-          1603151295,
+-          '1.9'
+-        ],
+-        [
+-          1603151355,
+-          '2.6'
+-        ],
+-        [
+-          1603151415,
+-          '2.4'
+-        ],
+-        [
+-          1603151475,
+-          '2'
+-        ],
+-        [
+-          1603151535,
+-          '1.9666666666666666'
+-        ],
+-        [
+-          1603151595,
+-          '1.8'
+-        ],
+-        [
+-          1603151655,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603151715,
+-          '1.6666666666666667'
+-        ],
+-        [
+-          1603151775,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603151835,
+-          '2.2'
+-        ],
+-        [
+-          1603151895,
+-          '1.9666666666666666'
+-        ],
+-        [
+-          1603151955,
+-          '2.566666666666667'
+-        ],
+-        [
+-          1603152015,
+-          '1.9'
+-        ],
+-        [
+-          1603152075,
+-          '2.466666666666667'
+-        ],
+-        [
+-          1603152135,
+-          '1.6'
+-        ],
+-        [
+-          1603152195,
+-          '1.6'
+-        ],
+-        [
+-          1603152255,
+-          '2.3666666666666667'
+-        ],
+-        [
+-          1603152315,
+-          '2.533333333333333'
+-        ],
+-        [
+-          1603152375,
+-          '1.5'
+-        ],
+-        [
+-          1603152435,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603152495,
+-          '2.2'
+-        ],
+-        [
+-          1603152555,
+-          '2.433333333333333'
+-        ],
+-        [
+-          1603152615,
+-          '2.3'
+-        ],
+-        [
+-          1603152675,
+-          '1.6333333333333333'
+-        ],
+-        [
+-          1603152735,
+-          '2.1666666666666665'
+-        ],
+-        [
+-          1603152795,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603152855,
+-          '2.066597780073997'
+-        ],
+-        [
+-          1603152915,
+-          '2.1'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-apps.zooz.co/payments-api-gateway/customers',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '71.4'
+-        ],
+-        [
+-          1603145895,
+-          '71.3'
+-        ],
+-        [
+-          1603145955,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603146015,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603146075,
+-          '71.2'
+-        ],
+-        [
+-          1603146135,
+-          '71.2'
+-        ],
+-        [
+-          1603146195,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603146255,
+-          '71.3'
+-        ],
+-        [
+-          1603146315,
+-          '71.13570452348412'
+-        ],
+-        [
+-          1603146375,
+-          '71.4'
+-        ],
+-        [
+-          1603146435,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603146495,
+-          '71.2'
+-        ],
+-        [
+-          1603146555,
+-          '71.3'
+-        ],
+-        [
+-          1603146615,
+-          '71.1'
+-        ],
+-        [
+-          1603146675,
+-          '71.50238341278045'
+-        ],
+-        [
+-          1603146735,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603146795,
+-          '70.9'
+-        ],
+-        [
+-          1603146855,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603146915,
+-          '70.96903230107672'
+-        ],
+-        [
+-          1603146975,
+-          '71.2'
+-        ],
+-        [
+-          1603147035,
+-          '71.0642978567381'
+-        ],
+-        [
+-          1603147095,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147155,
+-          '71.2'
+-        ],
+-        [
+-          1603147215,
+-          '71.09763007899735'
+-        ],
+-        [
+-          1603147275,
+-          '70.9'
+-        ],
+-        [
+-          1603147335,
+-          '71.2'
+-        ],
+-        [
+-          1603147395,
+-          '71.36882256499482'
+-        ],
+-        [
+-          1603147455,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603147515,
+-          '71.30237674589154'
+-        ],
+-        [
+-          1603147575,
+-          '71.33095563481217'
+-        ],
+-        [
+-          1603147635,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603147695,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603147755,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603147815,
+-          '71.1'
+-        ],
+-        [
+-          1603147875,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603147935,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603147995,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603148055,
+-          '71.1'
+-        ],
+-        [
+-          1603148115,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603148175,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603148235,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603148295,
+-          '71.43571452381747'
+-        ],
+-        [
+-          1603148355,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148415,
+-          '71.63333333333334'
+-        ],
+-        [
+-          1603148475,
+-          '71.8'
+-        ],
+-        [
+-          1603148535,
+-          '71.29762341255291'
+-        ],
+-        [
+-          1603148595,
+-          '71.01893838356895'
+-        ],
+-        [
+-          1603148655,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148715,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148775,
+-          '71.03096563447885'
+-        ],
+-        [
+-          1603148835,
+-          '71.09763007899735'
+-        ],
+-        [
+-          1603148895,
+-          '71.16429452351589'
+-        ],
+-        [
+-          1603148955,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603149015,
+-          '70.9'
+-        ],
+-        [
+-          1603149075,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603149135,
+-          '71.29762341255291'
+-        ],
+-        [
+-          1603149195,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149255,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603149315,
+-          '71.27854642440407'
+-        ],
+-        [
+-          1603149375,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603149435,
+-          '71.3'
+-        ],
+-        [
+-          1603149495,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149555,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603149615,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603149675,
+-          '71.05008831272703'
+-        ],
+-        [
+-          1603149735,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603149795,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603149855,
+-          '71'
+-        ],
+-        [
+-          1603149915,
+-          '71.45492971921232'
+-        ],
+-        [
+-          1603149975,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603150035,
+-          '71.1'
+-        ],
+-        [
+-          1603150095,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603150155,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603150215,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603150275,
+-          '71.1'
+-        ],
+-        [
+-          1603150335,
+-          '71.4'
+-        ],
+-        [
+-          1603150395,
+-          '71.2'
+-        ],
+-        [
+-          1603150455,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603150515,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603150575,
+-          '71.3'
+-        ],
+-        [
+-          1603150635,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603150695,
+-          '70.89763674544182'
+-        ],
+-        [
+-          1603150755,
+-          '73.80507712526803'
+-        ],
+-        [
+-          1603150815,
+-          '71.09763007899735'
+-        ],
+-        [
+-          1603150875,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603150935,
+-          '71.2'
+-        ],
+-        [
+-          1603150995,
+-          '71.2261162426223'
+-        ],
+-        [
+-          1603151055,
+-          '71.2'
+-        ],
+-        [
+-          1603151115,
+-          '71'
+-        ],
+-        [
+-          1603151175,
+-          '71.5'
+-        ],
+-        [
+-          1603151235,
+-          '70.86902896763226'
+-        ],
+-        [
+-          1603151295,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603151355,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151415,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151475,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603151535,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603151595,
+-          '71.1'
+-        ],
+-        [
+-          1603151655,
+-          '71'
+-        ],
+-        [
+-          1603151715,
+-          '71'
+-        ],
+-        [
+-          1603151775,
+-          '71.1'
+-        ],
+-        [
+-          1603151835,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603151895,
+-          '70.9'
+-        ],
+-        [
+-          1603151955,
+-          '71.1'
+-        ],
+-        [
+-          1603152015,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603152075,
+-          '71.1'
+-        ],
+-        [
+-          1603152135,
+-          '71.2'
+-        ],
+-        [
+-          1603152195,
+-          '71.1'
+-        ],
+-        [
+-          1603152255,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603152315,
+-          '71.1'
+-        ],
+-        [
+-          1603152375,
+-          '70.76666666666667'
+-        ],
+-        [
+-          1603152435,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603152495,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152555,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603152615,
+-          '71.2'
+-        ],
+-        [
+-          1603152675,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603152735,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603152795,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603152855,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603152915,
+-          '71.23333333333333'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-apps.zooz.co/payments-api-gateway/customers/{{ customerId }}/payment-methods/{{ tokenId }}',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603145895,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603145955,
+-          '70.73097563414552'
+-        ],
+-        [
+-          1603146015,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603146075,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603146135,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603146195,
+-          '71.1'
+-        ],
+-        [
+-          1603146255,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603146315,
+-          '70.96903230107672'
+-        ],
+-        [
+-          1603146375,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603146435,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603146495,
+-          '71.3'
+-        ],
+-        [
+-          1603146555,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603146615,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603146675,
+-          '71.3690456348545'
+-        ],
+-        [
+-          1603146735,
+-          '70.9'
+-        ],
+-        [
+-          1603146795,
+-          '70.6'
+-        ],
+-        [
+-          1603146855,
+-          '71'
+-        ],
+-        [
+-          1603146915,
+-          '71.06903563452117'
+-        ],
+-        [
+-          1603146975,
+-          '71.1'
+-        ],
+-        [
+-          1603147035,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603147095,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147155,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603147215,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603147275,
+-          '70.9'
+-        ],
+-        [
+-          1603147335,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147395,
+-          '71.33536320139191'
+-        ],
+-        [
+-          1603147455,
+-          '70.9'
+-        ],
+-        [
+-          1603147515,
+-          '71.3690456348545'
+-        ],
+-        [
+-          1603147575,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603147635,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147695,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147755,
+-          '71.5'
+-        ],
+-        [
+-          1603147815,
+-          '71.2'
+-        ],
+-        [
+-          1603147875,
+-          '70.73569118970633'
+-        ],
+-        [
+-          1603147935,
+-          '71.2'
+-        ],
+-        [
+-          1603147995,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603148055,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148115,
+-          '71.10237007900264'
+-        ],
+-        [
+-          1603148175,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603148235,
+-          '71.2'
+-        ],
+-        [
+-          1603148295,
+-          '71.50238341278045'
+-        ],
+-        [
+-          1603148355,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603148415,
+-          '71.63333333333334'
+-        ],
+-        [
+-          1603148475,
+-          '71.93333333333334'
+-        ],
+-        [
+-          1603148535,
+-          '71.39762007933068'
+-        ],
+-        [
+-          1603148595,
+-          '71.25233395572153'
+-        ],
+-        [
+-          1603148655,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603148715,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603148775,
+-          '71.33095563481217'
+-        ],
+-        [
+-          1603148835,
+-          '70.96430118996032'
+-        ],
+-        [
+-          1603148895,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603148955,
+-          '71.26904230141005'
+-        ],
+-        [
+-          1603149015,
+-          '70.9'
+-        ],
+-        [
+-          1603149075,
+-          '71.2'
+-        ],
+-        [
+-          1603149135,
+-          '71.26429119029366'
+-        ],
+-        [
+-          1603149195,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149255,
+-          '70.86666666666666'
+-        ],
+-        [
+-          1603149315,
+-          '71.57859643273879'
+-        ],
+-        [
+-          1603149375,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603149435,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149495,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603149555,
+-          '70.83333333333333'
+-        ],
+-        [
+-          1603149615,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149675,
+-          '70.9501116406172'
+-        ],
+-        [
+-          1603149735,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603149795,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149855,
+-          '71.2'
+-        ],
+-        [
+-          1603149915,
+-          '71.55557046529572'
+-        ],
+-        [
+-          1603149975,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603150035,
+-          '71'
+-        ],
+-        [
+-          1603150095,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603150155,
+-          '71'
+-        ],
+-        [
+-          1603150215,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603150275,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603150335,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603150395,
+-          '71.2'
+-        ],
+-        [
+-          1603150455,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603150515,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603150575,
+-          '71.46666666666667'
+-        ],
+-        [
+-          1603150635,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603150695,
+-          '70.89763674544182'
+-        ],
+-        [
+-          1603150755,
+-          '73.97800373521477'
+-        ],
+-        [
+-          1603150815,
+-          '71.0642978567381'
+-        ],
+-        [
+-          1603150875,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603150935,
+-          '71.4'
+-        ],
+-        [
+-          1603150995,
+-          '71.19277068258361'
+-        ],
+-        [
+-          1603151055,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603151115,
+-          '71'
+-        ],
+-        [
+-          1603151175,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603151235,
+-          '70.83569452315078'
+-        ],
+-        [
+-          1603151295,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603151355,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151415,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603151475,
+-          '71.2'
+-        ],
+-        [
+-          1603151535,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603151595,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603151655,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603151715,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151775,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151835,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603151895,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603151955,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603152015,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603152075,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603152135,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152195,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603152255,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603152315,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603152375,
+-          '70.83333333333333'
+-        ],
+-        [
+-          1603152435,
+-          '71.66666666666667'
+-        ],
+-        [
+-          1603152495,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152555,
+-          '71.3'
+-        ],
+-        [
+-          1603152615,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603152675,
+-          '71.3'
+-        ],
+-        [
+-          1603152735,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603152795,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603152855,
+-          '71.16429452351589'
+-        ],
+-        [
+-          1603152915,
+-          '71'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-pci.zooz.co/pci-api-gateway/payments',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '140.76666666666668'
+-        ],
+-        [
+-          1603145895,
+-          '140.2'
+-        ],
+-        [
+-          1603145955,
+-          '139.1953601546615'
+-        ],
+-        [
+-          1603146015,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603146075,
+-          '139.36666666666667'
+-        ],
+-        [
+-          1603146135,
+-          '139.96666666666667'
+-        ],
+-        [
+-          1603146195,
+-          '140.23333333333332'
+-        ],
+-        [
+-          1603146255,
+-          '140.06666666666666'
+-        ],
+-        [
+-          1603146315,
+-          '139.80466015533855'
+-        ],
+-        [
+-          1603146375,
+-          '140.73333333333332'
+-        ],
+-        [
+-          1603146435,
+-          '139.83333333333334'
+-        ],
+-        [
+-          1603146495,
+-          '140.53333333333333'
+-        ],
+-        [
+-          1603146555,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603146615,
+-          '139.76666666666668'
+-        ],
+-        [
+-          1603146675,
+-          '140.67135571185707'
+-        ],
+-        [
+-          1603146735,
+-          '139.8'
+-        ],
+-        [
+-          1603146795,
+-          '139.33333333333334'
+-        ],
+-        [
+-          1603146855,
+-          '139.73333333333332'
+-        ],
+-        [
+-          1603146915,
+-          '139.57131904396815'
+-        ],
+-        [
+-          1603146975,
+-          '139.5'
+-        ],
+-        [
+-          1603147035,
+-          '140.02866571114293'
+-        ],
+-        [
+-          1603147095,
+-          '141'
+-        ],
+-        [
+-          1603147155,
+-          '140.16666666666666'
+-        ],
+-        [
+-          1603147215,
+-          '140.09533015566146'
+-        ],
+-        [
+-          1603147275,
+-          '139.53333333333333'
+-        ],
+-        [
+-          1603147335,
+-          '139.7'
+-        ],
+-        [
+-          1603147395,
+-          '140.66316458660958'
+-        ],
+-        [
+-          1603147455,
+-          '140.2'
+-        ],
+-        [
+-          1603147515,
+-          '140.57135237841263'
+-        ],
+-        [
+-          1603147575,
+-          '139.5953468217726'
+-        ],
+-        [
+-          1603147635,
+-          '139.56666666666666'
+-        ],
+-        [
+-          1603147695,
+-          '140.1'
+-        ],
+-        [
+-          1603147755,
+-          '141'
+-        ],
+-        [
+-          1603147815,
+-          '139.63333333333333'
+-        ],
+-        [
+-          1603147875,
+-          '140.4046801560052'
+-        ],
+-        [
+-          1603147935,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603147995,
+-          '139.6'
+-        ],
+-        [
+-          1603148055,
+-          '140.26666666666668'
+-        ],
+-        [
+-          1603148115,
+-          '140.0713357111904'
+-        ],
+-        [
+-          1603148175,
+-          '140.13333333333333'
+-        ],
+-        [
+-          1603148235,
+-          '140'
+-        ],
+-        [
+-          1603148295,
+-          '140.6046868228941'
+-        ],
+-        [
+-          1603148355,
+-          '139.4'
+-        ],
+-        [
+-          1603148415,
+-          '141.03333333333333'
+-        ],
+-        [
+-          1603148475,
+-          '142.06666666666666'
+-        ],
+-        [
+-          1603148535,
+-          '140.19532682243926'
+-        ],
+-        [
+-          1603148595,
+-          '139.6038943718325'
+-        ],
+-        [
+-          1603148655,
+-          '139.46666666666667'
+-        ],
+-        [
+-          1603148715,
+-          '140.6'
+-        ],
+-        [
+-          1603148775,
+-          '140.36198793373555'
+-        ],
+-        [
+-          1603148835,
+-          '139.52868237725409'
+-        ],
+-        [
+-          1603148895,
+-          '140.2286590446985'
+-        ],
+-        [
+-          1603148955,
+-          '139.40464682156073'
+-        ],
+-        [
+-          1603149015,
+-          '140.36666666666667'
+-        ],
+-        [
+-          1603149075,
+-          '140.5'
+-        ],
+-        [
+-          1603149135,
+-          '139.9953334888837'
+-        ],
+-        [
+-          1603149195,
+-          '140.1'
+-        ],
+-        [
+-          1603149255,
+-          '139.73333333333332'
+-        ],
+-        [
+-          1603149315,
+-          '141.05684280713453'
+-        ],
+-        [
+-          1603149375,
+-          '140.3'
+-        ],
+-        [
+-          1603149435,
+-          '140.26666666666668'
+-        ],
+-        [
+-          1603149495,
+-          '140.53333333333333'
+-        ],
+-        [
+-          1603149555,
+-          '140.06666666666666'
+-        ],
+-        [
+-          1603149615,
+-          '141.03333333333333'
+-        ],
+-        [
+-          1603149675,
+-          '140.33392208484688'
+-        ],
+-        [
+-          1603149735,
+-          '140.4'
+-        ],
+-        [
+-          1603149795,
+-          '140.1'
+-        ],
+-        [
+-          1603149855,
+-          '139.86666666666667'
+-        ],
+-        [
+-          1603149915,
+-          '141.26606058572915'
+-        ],
+-        [
+-          1603149975,
+-          '139.66666666666666'
+-        ],
+-        [
+-          1603150035,
+-          '140.2'
+-        ],
+-        [
+-          1603150095,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603150155,
+-          '140.2'
+-        ],
+-        [
+-          1603150215,
+-          '141.33333333333334'
+-        ],
+-        [
+-          1603150275,
+-          '139.73333333333332'
+-        ],
+-        [
+-          1603150335,
+-          '140.4'
+-        ],
+-        [
+-          1603150395,
+-          '140.6'
+-        ],
+-        [
+-          1603150455,
+-          '139.7'
+-        ],
+-        [
+-          1603150515,
+-          '140.1'
+-        ],
+-        [
+-          1603150575,
+-          '140.7'
+-        ],
+-        [
+-          1603150635,
+-          '139.23333333333332'
+-        ],
+-        [
+-          1603150695,
+-          '139.92866904436517'
+-        ],
+-        [
+-          1603150755,
+-          '145.4658642871965'
+-        ],
+-        [
+-          1603150815,
+-          '140.19532682243926'
+-        ],
+-        [
+-          1603150875,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603150935,
+-          '140.13333333333333'
+-        ],
+-        [
+-          1603150995,
+-          '140.08469772249825'
+-        ],
+-        [
+-          1603151055,
+-          '140.33333333333334'
+-        ],
+-        [
+-          1603151115,
+-          '139.5'
+-        ],
+-        [
+-          1603151175,
+-          '140.26666666666668'
+-        ],
+-        [
+-          1603151235,
+-          '139.83799459982'
+-        ],
+-        [
+-          1603151295,
+-          '140.3'
+-        ],
+-        [
+-          1603151355,
+-          '139.1'
+-        ],
+-        [
+-          1603151415,
+-          '139.5'
+-        ],
+-        [
+-          1603151475,
+-          '140.33333333333334'
+-        ],
+-        [
+-          1603151535,
+-          '140.4'
+-        ],
+-        [
+-          1603151595,
+-          '140.63333333333333'
+-        ],
+-        [
+-          1603151655,
+-          '140.3'
+-        ],
+-        [
+-          1603151715,
+-          '140.83333333333334'
+-        ],
+-        [
+-          1603151775,
+-          '139.8'
+-        ],
+-        [
+-          1603151835,
+-          '140.53333333333333'
+-        ],
+-        [
+-          1603151895,
+-          '140.03333333333333'
+-        ],
+-        [
+-          1603151955,
+-          '139.8'
+-        ],
+-        [
+-          1603152015,
+-          '139.7'
+-        ],
+-        [
+-          1603152075,
+-          '139.86666666666667'
+-        ],
+-        [
+-          1603152135,
+-          '140.7'
+-        ],
+-        [
+-          1603152195,
+-          '140.73333333333332'
+-        ],
+-        [
+-          1603152255,
+-          '141.06666666666666'
+-        ],
+-        [
+-          1603152315,
+-          '139.3'
+-        ],
+-        [
+-          1603152375,
+-          '140.53333333333333'
+-        ],
+-        [
+-          1603152435,
+-          '140.9'
+-        ],
+-        [
+-          1603152495,
+-          '140.1'
+-        ],
+-        [
+-          1603152555,
+-          '140'
+-        ],
+-        [
+-          1603152615,
+-          '140.1'
+-        ],
+-        [
+-          1603152675,
+-          '141.73333333333332'
+-        ],
+-        [
+-          1603152735,
+-          '140.76666666666668'
+-        ],
+-        [
+-          1603152795,
+-          '140.16666666666666'
+-        ],
+-        [
+-          1603152855,
+-          '139.89533682210592'
+-        ],
+-        [
+-          1603152915,
+-          '139.9'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-pci.zooz.co/pci-api-gateway/payments/{{ paymentId }}/authorizations',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '138.4'
+-        ],
+-        [
+-          1603145895,
+-          '138.1'
+-        ],
+-        [
+-          1603145955,
+-          '136.52878237392085'
+-        ],
+-        [
+-          1603146015,
+-          '138.53333333333333'
+-        ],
+-        [
+-          1603146075,
+-          '137.26666666666668'
+-        ],
+-        [
+-          1603146135,
+-          '137.7'
+-        ],
+-        [
+-          1603146195,
+-          '138.26666666666668'
+-        ],
+-        [
+-          1603146255,
+-          '137.7'
+-        ],
+-        [
+-          1603146315,
+-          '138.43794793159773'
+-        ],
+-        [
+-          1603146375,
+-          '138.6'
+-        ],
+-        [
+-          1603146435,
+-          '137.8'
+-        ],
+-        [
+-          1603146495,
+-          '138.53333333333333'
+-        ],
+-        [
+-          1603146555,
+-          '138'
+-        ],
+-        [
+-          1603146615,
+-          '137.33333333333334'
+-        ],
+-        [
+-          1603146675,
+-          '139.03796793226442'
+-        ],
+-        [
+-          1603146735,
+-          '138.36666666666667'
+-        ],
+-        [
+-          1603146795,
+-          '137.5'
+-        ],
+-        [
+-          1603146855,
+-          '138.53333333333333'
+-        ],
+-        [
+-          1603146915,
+-          '138.00460015333846'
+-        ],
+-        [
+-          1603146975,
+-          '138.43333333333334'
+-        ],
+-        [
+-          1603147035,
+-          '137.66207793073562'
+-        ],
+-        [
+-          1603147095,
+-          '139.26666666666668'
+-        ],
+-        [
+-          1603147155,
+-          '138.26666666666668'
+-        ],
+-        [
+-          1603147215,
+-          '138.36205459818004'
+-        ],
+-        [
+-          1603147275,
+-          '137.93333333333334'
+-        ],
+-        [
+-          1603147335,
+-          '137.9'
+-        ],
+-        [
+-          1603147395,
+-          '138.65560277043534'
+-        ],
+-        [
+-          1603147455,
+-          '138.26666666666668'
+-        ],
+-        [
+-          1603147515,
+-          '138.93796459882'
+-        ],
+-        [
+-          1603147575,
+-          '137.92873570880968'
+-        ],
+-        [
+-          1603147635,
+-          '138.36666666666667'
+-        ],
+-        [
+-          1603147695,
+-          '138.86666666666667'
+-        ],
+-        [
+-          1603147755,
+-          '139'
+-        ],
+-        [
+-          1603147815,
+-          '137.83333333333334'
+-        ],
+-        [
+-          1603147875,
+-          '138.77129237641256'
+-        ],
+-        [
+-          1603147935,
+-          '139.23333333333332'
+-        ],
+-        [
+-          1603147995,
+-          '138.06666666666666'
+-        ],
+-        [
+-          1603148055,
+-          '138.86666666666667'
+-        ],
+-        [
+-          1603148115,
+-          '138.33794459815329'
+-        ],
+-        [
+-          1603148175,
+-          '138.46666666666667'
+-        ],
+-        [
+-          1603148235,
+-          '138.3'
+-        ],
+-        [
+-          1603148295,
+-          '139.43798126604221'
+-        ],
+-        [
+-          1603148355,
+-          '137.7'
+-        ],
+-        [
+-          1603148415,
+-          '139.8'
+-        ],
+-        [
+-          1603148475,
+-          '141.53333333333333'
+-        ],
+-        [
+-          1603148535,
+-          '138.6287123762541'
+-        ],
+-        [
+-          1603148595,
+-          '137.603360896239'
+-        ],
+-        [
+-          1603148655,
+-          '137.73333333333332'
+-        ],
+-        [
+-          1603148715,
+-          '139.16666666666666'
+-        ],
+-        [
+-          1603148775,
+-          '138.19539348688377'
+-        ],
+-        [
+-          1603148835,
+-          '137.96206793106893'
+-        ],
+-        [
+-          1603148895,
+-          '137.72874237525414'
+-        ],
+-        [
+-          1603148955,
+-          '136.13787126237543'
+-        ],
+-        [
+-          1603149015,
+-          '137.93333333333334'
+-        ],
+-        [
+-          1603149075,
+-          '139.36666666666667'
+-        ],
+-        [
+-          1603149135,
+-          '137.6954101529949'
+-        ],
+-        [
+-          1603149195,
+-          '137.83333333333334'
+-        ],
+-        [
+-          1603149255,
+-          '138.63333333333333'
+-        ],
+-        [
+-          1603149315,
+-          '139.52325387564593'
+-        ],
+-        [
+-          1603149375,
+-          '137.93333333333334'
+-        ],
+-        [
+-          1603149435,
+-          '138.16666666666666'
+-        ],
+-        [
+-          1603149495,
+-          '138.53333333333333'
+-        ],
+-        [
+-          1603149555,
+-          '138.76666666666668'
+-        ],
+-        [
+-          1603149615,
+-          '138.5'
+-        ],
+-        [
+-          1603149675,
+-          '137.76785416736095'
+-        ],
+-        [
+-          1603149735,
+-          '138.83333333333334'
+-        ],
+-        [
+-          1603149795,
+-          '138.4'
+-        ],
+-        [
+-          1603149855,
+-          '137.63333333333333'
+-        ],
+-        [
+-          1603149915,
+-          '139.42098024086687'
+-        ],
+-        [
+-          1603149975,
+-          '137.36666666666667'
+-        ],
+-        [
+-          1603150035,
+-          '137.96666666666667'
+-        ],
+-        [
+-          1603150095,
+-          '138.56666666666666'
+-        ],
+-        [
+-          1603150155,
+-          '138.13333333333333'
+-        ],
+-        [
+-          1603150215,
+-          '139.73333333333332'
+-        ],
+-        [
+-          1603150275,
+-          '137.36666666666667'
+-        ],
+-        [
+-          1603150335,
+-          '138.93333333333334'
+-        ],
+-        [
+-          1603150395,
+-          '137.6'
+-        ],
+-        [
+-          1603150455,
+-          '137.03333333333333'
+-        ],
+-        [
+-          1603150515,
+-          '136.83333333333334'
+-        ],
+-        [
+-          1603150575,
+-          '138.03333333333333'
+-        ],
+-        [
+-          1603150635,
+-          '137.1'
+-        ],
+-        [
+-          1603150695,
+-          '137.3954201526616'
+-        ],
+-        [
+-          1603150755,
+-          '141.79982015632564'
+-        ],
+-        [
+-          1603150815,
+-          '138.49538348721708'
+-        ],
+-        [
+-          1603150875,
+-          '138.5'
+-        ],
+-        [
+-          1603150935,
+-          '137.8'
+-        ],
+-        [
+-          1603150995,
+-          '137.95058188002267'
+-        ],
+-        [
+-          1603151055,
+-          '137.46666666666667'
+-        ],
+-        [
+-          1603151115,
+-          '137.03333333333333'
+-        ],
+-        [
+-          1603151175,
+-          '138.03333333333333'
+-        ],
+-        [
+-          1603151235,
+-          '138.00460015333846'
+-        ],
+-        [
+-          1603151295,
+-          '138.1'
+-        ],
+-        [
+-          1603151355,
+-          '136.6'
+-        ],
+-        [
+-          1603151415,
+-          '136.1'
+-        ],
+-        [
+-          1603151475,
+-          '137.03333333333333'
+-        ],
+-        [
+-          1603151535,
+-          '138.16666666666666'
+-        ],
+-        [
+-          1603151595,
+-          '138.5'
+-        ],
+-        [
+-          1603151655,
+-          '137.93333333333334'
+-        ],
+-        [
+-          1603151715,
+-          '138.3'
+-        ],
+-        [
+-          1603151775,
+-          '136.96666666666667'
+-        ],
+-        [
+-          1603151835,
+-          '137.5'
+-        ],
+-        [
+-          1603151895,
+-          '136.96666666666667'
+-        ],
+-        [
+-          1603151955,
+-          '137.23333333333332'
+-        ],
+-        [
+-          1603152015,
+-          '135.83333333333334'
+-        ],
+-        [
+-          1603152075,
+-          '138.56666666666666'
+-        ],
+-        [
+-          1603152135,
+-          '137.6'
+-        ],
+-        [
+-          1603152195,
+-          '137.8'
+-        ],
+-        [
+-          1603152255,
+-          '138.3'
+-        ],
+-        [
+-          1603152315,
+-          '136.16666666666666'
+-        ],
+-        [
+-          1603152375,
+-          '138.76666666666668'
+-        ],
+-        [
+-          1603152435,
+-          '137.56666666666666'
+-        ],
+-        [
+-          1603152495,
+-          '137.16666666666666'
+-        ],
+-        [
+-          1603152555,
+-          '136.9'
+-        ],
+-        [
+-          1603152615,
+-          '137.13333333333333'
+-        ],
+-        [
+-          1603152675,
+-          '137.7'
+-        ],
+-        [
+-          1603152735,
+-          '137.53333333333333'
+-        ],
+-        [
+-          1603152795,
+-          '137.1'
+-        ],
+-        [
+-          1603152855,
+-          '135.52881570614312'
+-        ],
+-        [
+-          1603152915,
+-          '136.03333333333333'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-pci.zooz.co/pci-api-gateway/payments/{{ paymentId }}/authorizations',
+-        status_code: '400'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '2.7'
+-        ],
+-        [
+-          1603145895,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603145955,
+-          '1.6999433352221591'
+-        ],
+-        [
+-          1603146015,
+-          '2'
+-        ],
+-        [
+-          1603146075,
+-          '2.7666666666666666'
+-        ],
+-        [
+-          1603146135,
+-          '1.9'
+-        ],
+-        [
+-          1603146195,
+-          '1.6'
+-        ],
+-        [
+-          1603146255,
+-          '2.566666666666667'
+-        ],
+-        [
+-          1603146315,
+-          '1.7000566685556187'
+-        ],
+-        [
+-          1603146375,
+-          '1.7666666666666666'
+-        ],
+-        [
+-          1603146435,
+-          '2.1333333333333333'
+-        ],
+-        [
+-          1603146495,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603146555,
+-          '1.7'
+-        ],
+-        [
+-          1603146615,
+-          '2.5'
+-        ],
+-        [
+-          1603146675,
+-          '1.766725557518584'
+-        ],
+-        [
+-          1603146735,
+-          '1.5666666666666667'
+-        ],
+-        [
+-          1603146795,
+-          '1.5'
+-        ],
+-        [
+-          1603146855,
+-          '1.4666666666666666'
+-        ],
+-        [
+-          1603146915,
+-          '1.766725557518584'
+-        ],
+-        [
+-          1603146975,
+-          '1.2666666666666666'
+-        ],
+-        [
+-          1603147035,
+-          '2.0332655578147394'
+-        ],
+-        [
+-          1603147095,
+-          '1.5666666666666667'
+-        ],
+-        [
+-          1603147155,
+-          '1.8'
+-        ],
+-        [
+-          1603147215,
+-          '1.599946668444385'
+-        ],
+-        [
+-          1603147275,
+-          '1.9'
+-        ],
+-        [
+-          1603147335,
+-          '1.9333333333333333'
+-        ],
+-        [
+-          1603147395,
+-          '2.107939906982969'
+-        ],
+-        [
+-          1603147455,
+-          '1.7666666666666666'
+-        ],
+-        [
+-          1603147515,
+-          '2.233407780259342'
+-        ],
+-        [
+-          1603147575,
+-          '1.6999433352221591'
+-        ],
+-        [
+-          1603147635,
+-          '1.1333333333333333'
+-        ],
+-        [
+-          1603147695,
+-          '1.3'
+-        ],
+-        [
+-          1603147755,
+-          '1.8'
+-        ],
+-        [
+-          1603147815,
+-          '1.6'
+-        ],
+-        [
+-          1603147875,
+-          '1.300043334777826'
+-        ],
+-        [
+-          1603147935,
+-          '1.2'
+-        ],
+-        [
+-          1603147995,
+-          '1.3333333333333333'
+-        ],
+-        [
+-          1603148055,
+-          '1.4666666666666666'
+-        ],
+-        [
+-          1603148115,
+-          '1.8667288909630324'
+-        ],
+-        [
+-          1603148175,
+-          '1.6333333333333333'
+-        ],
+-        [
+-          1603148235,
+-          '2.066666666666667'
+-        ],
+-        [
+-          1603148295,
+-          '1.4667155571852397'
+-        ],
+-        [
+-          1603148355,
+-          '1.7'
+-        ],
+-        [
+-          1603148415,
+-          '1.2'
+-        ],
+-        [
+-          1603148475,
+-          '1.4'
+-        ],
+-        [
+-          1603148535,
+-          '1.599946668444385'
+-        ],
+-        [
+-          1603148595,
+-          '1.900506801813817'
+-        ],
+-        [
+-          1603148655,
+-          '1.5666666666666667'
+-        ],
+-        [
+-          1603148715,
+-          '1.4333333333333333'
+-        ],
+-        [
+-          1603148775,
+-          '2.2665911136295454'
+-        ],
+-        [
+-          1603148835,
+-          '1.9332688910369653'
+-        ],
+-        [
+-          1603148895,
+-          '2.2665911136295454'
+-        ],
+-        [
+-          1603148955,
+-          '2.9000966698889967'
+-        ],
+-        [
+-          1603149015,
+-          '1.8666666666666667'
+-        ],
+-        [
+-          1603149075,
+-          '1.5333333333333334'
+-        ],
+-        [
+-          1603149135,
+-          '2.066597780073997'
+-        ],
+-        [
+-          1603149195,
+-          '2'
+-        ],
+-        [
+-          1603149255,
+-          '1.4666666666666666'
+-        ],
+-        [
+-          1603149315,
+-          '1.8336389398233037'
+-        ],
+-        [
+-          1603149375,
+-          '1.8'
+-        ],
+-        [
+-          1603149435,
+-          '2.033333333333333'
+-        ],
+-        [
+-          1603149495,
+-          '2'
+-        ],
+-        [
+-          1603149555,
+-          '1.4666666666666666'
+-        ],
+-        [
+-          1603149615,
+-          '2.566666666666667'
+-        ],
+-        [
+-          1603149675,
+-          '2.1328356716766086'
+-        ],
+-        [
+-          1603149735,
+-          '1.5333333333333334'
+-        ],
+-        [
+-          1603149795,
+-          '2.2'
+-        ],
+-        [
+-          1603149855,
+-          '2.3'
+-        ],
+-        [
+-          1603149915,
+-          '2.0799087523902178'
+-        ],
+-        [
+-          1603149975,
+-          '2'
+-        ],
+-        [
+-          1603150035,
+-          '2.1'
+-        ],
+-        [
+-          1603150095,
+-          '1.6'
+-        ],
+-        [
+-          1603150155,
+-          '2.466666666666667'
+-        ],
+-        [
+-          1603150215,
+-          '2'
+-        ],
+-        [
+-          1603150275,
+-          '2.433333333333333'
+-        ],
+-        [
+-          1603150335,
+-          '2.033333333333333'
+-        ],
+-        [
+-          1603150395,
+-          '2.7'
+-        ],
+-        [
+-          1603150455,
+-          '2.3'
+-        ],
+-        [
+-          1603150515,
+-          '3.2333333333333334'
+-        ],
+-        [
+-          1603150575,
+-          '2.6666666666666665'
+-        ],
+-        [
+-          1603150635,
+-          '2.3333333333333335'
+-        ],
+-        [
+-          1603150695,
+-          '2.766574447518416'
+-        ],
+-        [
+-          1603150755,
+-          '3.043508335062599'
+-        ],
+-        [
+-          1603150815,
+-          '1.8332722242591912'
+-        ],
+-        [
+-          1603150875,
+-          '2.2'
+-        ],
+-        [
+-          1603150935,
+-          '2.6333333333333333'
+-        ],
+-        [
+-          1603150995,
+-          '2.5676081229784256'
+-        ],
+-        [
+-          1603151055,
+-          '2.8'
+-        ],
+-        [
+-          1603151115,
+-          '2.466666666666667'
+-        ],
+-        [
+-          1603151175,
+-          '1.9666666666666666'
+-        ],
+-        [
+-          1603151235,
+-          '2.0667355578519286'
+-        ],
+-        [
+-          1603151295,
+-          '2.4'
+-        ],
+-        [
+-          1603151355,
+-          '2.033333333333333'
+-        ],
+-        [
+-          1603151415,
+-          '2.8'
+-        ],
+-        [
+-          1603151475,
+-          '3.5'
+-        ],
+-        [
+-          1603151535,
+-          '1.8333333333333333'
+-        ],
+-        [
+-          1603151595,
+-          '2.1666666666666665'
+-        ],
+-        [
+-          1603151655,
+-          '2.5'
+-        ],
+-        [
+-          1603151715,
+-          '2.2666666666666666'
+-        ],
+-        [
+-          1603151775,
+-          '2.8666666666666667'
+-        ],
+-        [
+-          1603151835,
+-          '2.966666666666667'
+-        ],
+-        [
+-          1603151895,
+-          '3.033333333333333'
+-        ],
+-        [
+-          1603151955,
+-          '3'
+-        ],
+-        [
+-          1603152015,
+-          '3.933333333333333'
+-        ],
+-        [
+-          1603152075,
+-          '1.7666666666666666'
+-        ],
+-        [
+-          1603152135,
+-          '3.4'
+-        ],
+-        [
+-          1603152195,
+-          '2.966666666666667'
+-        ],
+-        [
+-          1603152255,
+-          '2.8666666666666667'
+-        ],
+-        [
+-          1603152315,
+-          '2.966666666666667'
+-        ],
+-        [
+-          1603152375,
+-          '2.433333333333333'
+-        ],
+-        [
+-          1603152435,
+-          '3.6333333333333333'
+-        ],
+-        [
+-          1603152495,
+-          '2.8666666666666667'
+-        ],
+-        [
+-          1603152555,
+-          '3.5'
+-        ],
+-        [
+-          1603152615,
+-          '2.6666666666666665'
+-        ],
+-        [
+-          1603152675,
+-          '3.7666666666666666'
+-        ],
+-        [
+-          1603152735,
+-          '3.1'
+-        ],
+-        [
+-          1603152795,
+-          '3.033333333333333'
+-        ],
+-        [
+-          1603152855,
+-          '3.9332022265924467'
+-        ],
+-        [
+-          1603152915,
+-          '3.466666666666667'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-pci.zooz.co/pci-api-gateway/payments/{{ paymentId }}/voids',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603145895,
+-          '71.2'
+-        ],
+-        [
+-          1603145955,
+-          '70.09766341121963'
+-        ],
+-        [
+-          1603146015,
+-          '71.2'
+-        ],
+-        [
+-          1603146075,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603146135,
+-          '71.1'
+-        ],
+-        [
+-          1603146195,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603146255,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603146315,
+-          '71.06903563452117'
+-        ],
+-        [
+-          1603146375,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603146435,
+-          '71'
+-        ],
+-        [
+-          1603146495,
+-          '71.3'
+-        ],
+-        [
+-          1603146555,
+-          '71.1'
+-        ],
+-        [
+-          1603146615,
+-          '71.1'
+-        ],
+-        [
+-          1603146675,
+-          '71.5690523017434'
+-        ],
+-        [
+-          1603146735,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603146795,
+-          '70.83333333333333'
+-        ],
+-        [
+-          1603146855,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603146915,
+-          '71.00236674555819'
+-        ],
+-        [
+-          1603146975,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147035,
+-          '70.96430118996032'
+-        ],
+-        [
+-          1603147095,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147155,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603147215,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603147275,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603147335,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603147395,
+-          '71.06768829256868'
+-        ],
+-        [
+-          1603147455,
+-          '70.9'
+-        ],
+-        [
+-          1603147515,
+-          '71.5690523017434'
+-        ],
+-        [
+-          1603147575,
+-          '71.29762341255291'
+-        ],
+-        [
+-          1603147635,
+-          '70.73333333333333'
+-        ],
+-        [
+-          1603147695,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147755,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603147815,
+-          '70.8'
+-        ],
+-        [
+-          1603147875,
+-          '70.96903230107672'
+-        ],
+-        [
+-          1603147935,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603147995,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603148055,
+-          '71.2'
+-        ],
+-        [
+-          1603148115,
+-          '71.33571119037303'
+-        ],
+-        [
+-          1603148175,
+-          '71.3'
+-        ],
+-        [
+-          1603148235,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603148295,
+-          '71.53571785726191'
+-        ],
+-        [
+-          1603148355,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603148415,
+-          '71.56666666666666'
+-        ],
+-        [
+-          1603148475,
+-          '72.56666666666666'
+-        ],
+-        [
+-          1603148535,
+-          '71.4642845238492'
+-        ],
+-        [
+-          1603148595,
+-          '70.9522539343825'
+-        ],
+-        [
+-          1603148655,
+-          '70.73333333333333'
+-        ],
+-        [
+-          1603148715,
+-          '71.46666666666667'
+-        ],
+-        [
+-          1603148775,
+-          '71.09763007899735'
+-        ],
+-        [
+-          1603148835,
+-          '71.29762341255291'
+-        ],
+-        [
+-          1603148895,
+-          '71.16429452351589'
+-        ],
+-        [
+-          1603148955,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603149015,
+-          '71.2'
+-        ],
+-        [
+-          1603149075,
+-          '71.5'
+-        ],
+-        [
+-          1603149135,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603149195,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603149255,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603149315,
+-          '71.27854642440407'
+-        ],
+-        [
+-          1603149375,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149435,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603149495,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603149555,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149615,
+-          '71.6'
+-        ],
+-        [
+-          1603149675,
+-          '70.75015829639752'
+-        ],
+-        [
+-          1603149735,
+-          '71.3'
+-        ],
+-        [
+-          1603149795,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603149855,
+-          '70.8'
+-        ],
+-        [
+-          1603149915,
+-          '71.52202354993459'
+-        ],
+-        [
+-          1603149975,
+-          '70.73333333333333'
+-        ],
+-        [
+-          1603150035,
+-          '71'
+-        ],
+-        [
+-          1603150095,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603150155,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603150215,
+-          '71.63333333333334'
+-        ],
+-        [
+-          1603150275,
+-          '70.86666666666666'
+-        ],
+-        [
+-          1603150335,
+-          '71.4'
+-        ],
+-        [
+-          1603150395,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603150455,
+-          '70.83333333333333'
+-        ],
+-        [
+-          1603150515,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603150575,
+-          '71.5'
+-        ],
+-        [
+-          1603150635,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603150695,
+-          '71.33095563481217'
+-        ],
+-        [
+-          1603150755,
+-          '73.87424776924672'
+-        ],
+-        [
+-          1603150815,
+-          '71.03096563447885'
+-        ],
+-        [
+-          1603150875,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603150935,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603150995,
+-          '71.12607956250625'
+-        ],
+-        [
+-          1603151055,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151115,
+-          '70.86666666666666'
+-        ],
+-        [
+-          1603151175,
+-          '71.4'
+-        ],
+-        [
+-          1603151235,
+-          '70.70235674522486'
+-        ],
+-        [
+-          1603151295,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603151355,
+-          '70.6'
+-        ],
+-        [
+-          1603151415,
+-          '70.8'
+-        ],
+-        [
+-          1603151475,
+-          '70.76666666666667'
+-        ],
+-        [
+-          1603151535,
+-          '71.2'
+-        ],
+-        [
+-          1603151595,
+-          '71.1'
+-        ],
+-        [
+-          1603151655,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603151715,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151775,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603151835,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603151895,
+-          '71'
+-        ],
+-        [
+-          1603151955,
+-          '71.1'
+-        ],
+-        [
+-          1603152015,
+-          '70.76666666666667'
+-        ],
+-        [
+-          1603152075,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603152135,
+-          '71.1'
+-        ],
+-        [
+-          1603152195,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603152255,
+-          '71.83333333333333'
+-        ],
+-        [
+-          1603152315,
+-          '70.86666666666666'
+-        ],
+-        [
+-          1603152375,
+-          '71.2'
+-        ],
+-        [
+-          1603152435,
+-          '71.53333333333333'
+-        ],
+-        [
+-          1603152495,
+-          '71.53333333333333'
+-        ],
+-        [
+-          1603152555,
+-          '71.4'
+-        ],
+-        [
+-          1603152615,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152675,
+-          '71.63333333333334'
+-        ],
+-        [
+-          1603152735,
+-          '71.46666666666667'
+-        ],
+-        [
+-          1603152795,
+-          '71.1'
+-        ],
+-        [
+-          1603152855,
+-          '71.0642978567381'
+-        ],
+-        [
+-          1603152915,
+-          '71.06666666666666'
+-        ]
+-      ]
+-    },
+-    {
+-      metric: {
+-        path: 'POST http://internal.eks-mars-pci.zooz.co/pci-api-gateway/tokens',
+-        status_code: '201'
+-      },
+-      values: [
+-        [
+-          1603145835,
+-          '71.46666666666667'
+-        ],
+-        [
+-          1603145895,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603145955,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603146015,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603146075,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603146135,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603146195,
+-          '71.2'
+-        ],
+-        [
+-          1603146255,
+-          '71.1'
+-        ],
+-        [
+-          1603146315,
+-          '71.03570119003967'
+-        ],
+-        [
+-          1603146375,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603146435,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603146495,
+-          '71.1'
+-        ],
+-        [
+-          1603146555,
+-          '71.3'
+-        ],
+-        [
+-          1603146615,
+-          '71.2'
+-        ],
+-        [
+-          1603146675,
+-          '71.3690456348545'
+-        ],
+-        [
+-          1603146735,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603146795,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603146855,
+-          '71'
+-        ],
+-        [
+-          1603146915,
+-          '71.1690389679656'
+-        ],
+-        [
+-          1603146975,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147035,
+-          '71.09763007899735'
+-        ],
+-        [
+-          1603147095,
+-          '71.1'
+-        ],
+-        [
+-          1603147155,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603147215,
+-          '70.99763341221959'
+-        ],
+-        [
+-          1603147275,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603147335,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603147395,
+-          '71.30190383778901'
+-        ],
+-        [
+-          1603147455,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603147515,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603147575,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603147635,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147695,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603147755,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603147815,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603147875,
+-          '71.1690389679656'
+-        ],
+-        [
+-          1603147935,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603147995,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603148055,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603148115,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603148175,
+-          '71.2'
+-        ],
+-        [
+-          1603148235,
+-          '71.2'
+-        ],
+-        [
+-          1603148295,
+-          '71.30237674589154'
+-        ],
+-        [
+-          1603148355,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148415,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603148475,
+-          '71.5'
+-        ],
+-        [
+-          1603148535,
+-          '71.26429119029366'
+-        ],
+-        [
+-          1603148595,
+-          '71.05228060816218'
+-        ],
+-        [
+-          1603148655,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603148715,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603148775,
+-          '71.26429119029366'
+-        ],
+-        [
+-          1603148835,
+-          '71.13096230125662'
+-        ],
+-        [
+-          1603148895,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603148955,
+-          '71.23570785692858'
+-        ],
+-        [
+-          1603149015,
+-          '70.93333333333334'
+-        ],
+-        [
+-          1603149075,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603149135,
+-          '71.2309589680344'
+-        ],
+-        [
+-          1603149195,
+-          '71.2'
+-        ],
+-        [
+-          1603149255,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603149315,
+-          '71.41190198366394'
+-        ],
+-        [
+-          1603149375,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149435,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603149495,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603149555,
+-          '71.3'
+-        ],
+-        [
+-          1603149615,
+-          '71.2'
+-        ],
+-        [
+-          1603149675,
+-          '70.8834605258773'
+-        ],
+-        [
+-          1603149735,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149795,
+-          '71.6'
+-        ],
+-        [
+-          1603149855,
+-          '71.16666666666667'
+-        ],
+-        [
+-          1603149915,
+-          '71.55557046529572'
+-        ],
+-        [
+-          1603149975,
+-          '71.1'
+-        ],
+-        [
+-          1603150035,
+-          '71.1'
+-        ],
+-        [
+-          1603150095,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603150155,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603150215,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603150275,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603150335,
+-          '71.4'
+-        ],
+-        [
+-          1603150395,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603150455,
+-          '71.1'
+-        ],
+-        [
+-          1603150515,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603150575,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603150635,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603150695,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603150755,
+-          '73.87424776924672'
+-        ],
+-        [
+-          1603150815,
+-          '70.93096896770108'
+-        ],
+-        [
+-          1603150875,
+-          '71.1'
+-        ],
+-        [
+-          1603150935,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603150995,
+-          '71.15942512254493'
+-        ],
+-        [
+-          1603151055,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603151115,
+-          '70.96666666666667'
+-        ],
+-        [
+-          1603151175,
+-          '71.46666666666667'
+-        ],
+-        [
+-          1603151235,
+-          '71.13570452348412'
+-        ],
+-        [
+-          1603151295,
+-          '71.43333333333334'
+-        ],
+-        [
+-          1603151355,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603151415,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603151475,
+-          '71.1'
+-        ],
+-        [
+-          1603151535,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603151595,
+-          '71.1'
+-        ],
+-        [
+-          1603151655,
+-          '71.2'
+-        ],
+-        [
+-          1603151715,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603151775,
+-          '71.1'
+-        ],
+-        [
+-          1603151835,
+-          '71.33333333333333'
+-        ],
+-        [
+-          1603151895,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603151955,
+-          '71.1'
+-        ],
+-        [
+-          1603152015,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152075,
+-          '71.3'
+-        ],
+-        [
+-          1603152135,
+-          '71.26666666666667'
+-        ],
+-        [
+-          1603152195,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603152255,
+-          '71.23333333333333'
+-        ],
+-        [
+-          1603152315,
+-          '71.03333333333333'
+-        ],
+-        [
+-          1603152375,
+-          '70.86666666666666'
+-        ],
+-        [
+-          1603152435,
+-          '71.36666666666666'
+-        ],
+-        [
+-          1603152495,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603152555,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603152615,
+-          '71.06666666666666'
+-        ],
+-        [
+-          1603152675,
+-          '71.3'
+-        ],
+-        [
+-          1603152735,
+-          '71.2'
+-        ],
+-        [
+-          1603152795,
+-          '71.13333333333334'
+-        ],
+-        [
+-          1603152855,
+-          '71.03096563447885'
+-        ],
+-        [
+-          1603152915,
+-          '71.2'
+-        ]
+-      ]
++export const graphData = createSelector(graphRps, (rpsArray) => {
++  // todo sanitize data// and merge to one graph
++  /*
++  * todo add actions for filters,
++  *  todo add actions for delete graph data.
++  *
++  * */
++
++  // [
++  //   {
++  //     "metric": {
++  //       "request_name": "GET https://www.google.co.il",
++  //       "status_code": "200"
++  //     },
++  //     "values": [
++  //       [1605209400, "2.9999999999999996"]
++  //     ]
++  //   }]
++
++  // const data = [
++  //   {
++  //     name: 'Page A', uv: 4000, pv: 2400, amt: 2400
++  //   },
++  //   {
++  //     name: 'Page B', uv: 3000, pv: 1398, amt: 2210
++  //   },
++  //   {
++  //     name: 'Page C', uv: 2000, pv: 9800, amt: 2290
++  //   }
++  // ];
++
++  console.log('rpsArray', rpsArray)
++  return [
++
++  ]
++});
++
++export const graphSummeryData = createSelector(graphSummery, (summery) => {
++  return summery.map((data) => {
++    return {
++      ...data,
++      p50: Math.floor(data.p50 * 1000) || 'N/A',
++      p95: Math.floor(data.p95 * 1000) || 'N/A',
++      p99: Math.floor(data.p99 * 1000) || 'N/A',
++      id: `${data.request_name}_${data.status_code}`
+     }
+-  ]
++  })
++})
++
++export const prometheusData = createSelector(filters, graphRps, graphP50, graphP90, graphP95, graphP99, (filters, arrayGraphRps, graphP50, graphP90, graphP95, graphP99) => {
++  const sanitizedDataRps = filters.rps ? sanitizedGraphDataToSchema(arrayGraphRps, 'rps') : { values: [], keys: [] };
++  const sanitizedDataP50 = filters.p50 ? sanitizedGraphDataToSchema(graphP50, 'p50', 1000) : { values: [], keys: [] };
++  const sanitizedDataP90 = filters.p90 ? sanitizedGraphDataToSchema(graphP90, 'p90', 1000) : { values: [], keys: [] };
++  const sanitizedDataP95 = filters.p95 ? sanitizedGraphDataToSchema(graphP95, 'p95', 1000) : { values: [], keys: [] };
++  const sanitizedDataP99 = filters.p99 ? sanitizedGraphDataToSchema(graphP99, 'p99', 1000) : { values: [], keys: [] };
++
++  // const result = sanitizedDataRps.concat(sanitizedDataP50);
++  // now need to sort by time, then merge with other graphs
++
++  // result extract keys
++  // const allData = sanitizedDataRps.concat(sanitizedDataP50);
++  const values =
++      mergeSortedArraysByStartTime(
++        mergeSortedArraysByStartTime(mergeSortedArraysByStartTime(mergeSortedArraysByStartTime(sanitizedDataRps.values, sanitizedDataP50.values, 'time'),
++          sanitizedDataP90.values, 'time'), sanitizedDataP95.values, 'time'), sanitizedDataP99.values, 'time')
+ 
+-  // if (!prometheusResult) {
+-  //   return mock;
++  const latencyKeys = sanitizedDataP50.keys.concat(sanitizedDataP90.keys).concat(sanitizedDataP95.keys).concat(sanitizedDataP99.keys);
++  console.log('manor',values)
++  return {
++    values: values,
++    rpsKeys: sanitizedDataRps.keys,
++    latencyKeys
++  }
++  // console.log('sanitizedData', sanitizedData);
++  // // assume all times are same so we run on times of the first
++  // const entries = Object.entries(sanitizedData);
++  // const keys = entries.map((entry) => entry[0]);
++  // if (entries.length === 0) {
++  //   return {
++  //     values: [],
++  //     keys: []
++  //   };
++  // }
++  // // global.manor = entries;
++  // // array= [{name,rps}]
++  // // entries = [[route,array],  ....]
++  // const result = [];
++  // for (let i = 0; i < entries[0][1].length; i++) {
++  //   const firstRoute = entries[0][0];
++  //   const name = entries[0][1][i].name;
++  //   const rps = entries[0][1][i].rps;
++  //
++  //   const mergedDot = { name, [firstRoute]: rps }
++  //   console.log('mergedDot', mergedDot);
++  //   for (let j = 1; j < entries.length; j++) {
++  //     const route = entries[j][0]
++  //     const rps = entries[j][1][i] ? entries[j][1][i].rps : 0
++  //     mergedDot[route] = rps;
++  //   }
++  //   result.push(mergedDot);
+   // }
+-  const sanitizedData = mock.reduce((acc, value) => {
+-    const dots = value.values.flatMap((dot) => {
++  // console.log('my result', result)
++  // return {
++  //   values: result,
++  //   keys
++  // };
++});
++
++function mergeSortedArraysByStartTime (arr1, arr2, property, assignProps = {}) {
++  const arr3 = [];
++
++  let i = 0; let j = 0;
++  while (i < arr1.length && j < arr2.length) {
++    if (arr1[i][property] < arr2[j][property]) {
++      arr3.push(Object.assign({}, arr1[i], assignProps));
++      i++;
++    } else if (arr1[i][property] === arr2[j][property]) {
++      const newData = { ...arr1[i], ...arr2[j], ...assignProps };
++      arr3.push(newData);
++      i++;
++      j++;
++    } else {
++      arr3.push(Object.assign({}, arr2[j], assignProps));
++      j++;
++    }
++  }
++  while (i < arr1.length) {
++    arr3.push(arr1[i]);
++    i++;
++  }
++  while (j < arr2.length) {
++    arr3.push(arr2[j]);
++    j++;
++  }
++  return arr3;
++}
++function sanitizedGraphDataToSchema (arrayGraph, valueType, valueFactor = 1) {
++
++  const result = arrayGraph.reduce((acc, metric) => {
++    const key = Object.keys(metric.metric).length > 0 ? `${valueType}-${metric.metric.request_name}_${metric.metric.status_code}` : valueType
++    const dots = metric.values.flatMap((dot) => {
+       if (dot[1] !== 'NaN') {
+         return [{
+           name: `${dateFormat(dot[0] * 1000, 'h:MM:ss')}`,
+-          rps: dot[1] * 1000
++          [key]: Math.floor(dot[1] * valueFactor),
++          time: Math.floor(dot[0] * 1000)
+         }]
+       }
+       return [];
+     });
+-    const route = value.metric.path + '_' + value.metric.status_code;
+-
+-    if (acc[route]) {
+-      throw new Error('route already exist');
+-      // acc[route] = dots;
+-    } else {
+-      acc[route] = dots;
+-    }
++    acc.keys.push(key)
++    acc.values = mergeSortedArraysByStartTime(dots, acc.values, 'time')
+     return acc;
+-  }, {});
+-  console.log('result', sanitizedData);
+-  // assume all times are same so we run on times of the first
+-  const entries = Object.entries(sanitizedData);
+-  const keys = entries.map((entry)=>entry[0]);
+-  if (entries.length === 0) {
+-    return [];
+-  }
+-global.manor = entries;
+-  // array= [{name,rps}]
+-  // entries = [[route,array],  ....]
+-  const result = [];
+-  console.log("manor",entries[0][1]);
+-  for (let i = 0; i < entries[0][1].length; i++) {
+-    const firstRoute = entries[0][0];
+-    const name = entries[0][1][i].name;
+-    const rps = entries[0][1][i].rps;
++    // return dots;
++  }, { keys: [], values: [] })
+ 
+-    const mergedDot = { name, [firstRoute]: rps }
+-    console.log('mergedDot',mergedDot);
+-    for (let j = 1; j < entries.length; j++) {
+-      const route = entries[j][0]
+-      const rps = entries[j][1][i].rps
+-      mergedDot[route] = rps;
+-    }
+-    result.push(mergedDot);
+-  }
+-  console.log('my result', result)
+-  return {
+-      values: result,
+-      keys
+-  };
+-});
++  return result;
++}
+ 
+ export const benchmarkWithKeys = createSelector(benchmark, (benchmark) => {
+   if (benchmark) {
+Index: ui/src/features/redux/apis/reportsApi.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/redux/apis/reportsApi.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/redux/apis/reportsApi.js	(date 1605641226478)
+@@ -36,6 +36,70 @@
+   });
+ };
+ 
++export const getSummeryGraphFromFramework = (testId, reportId) => {
++  // const Dummy = [
++  //   {
++  //     request_name: 'google',
++  //     status_code: '429',
++  //     p50: '0.03103548739899216',
++  //     p95: '0.04996742605808511',
++  //     p99: '0.16504842883322018',
++  //     total_requests: '863'
++  //   },
++  //   {
++  //     request_name: 'GET http://www.google.com/dasasdasdasd',
++  //     status_code: '404',
++  //     p50: '0.005001761777446654',
++  //     p95: '0.009503347377148641',
++  //     p99: '0.009903488319344374',
++  //     total_requests: '5691'
++  //   },
++  //   {
++  //     request_name: 'google',
++  //     status_code: '200',
++  //     p50: '0.0303518147405923',
++  //     p95: '0.048668448007125366',
++  //     p99: '0.10860000000000185',
++  //     total_requests: '4839'
++  //   },
++  //   {
++  //     request_name: 'google',
++  //     status_code: '302',
++  //     p50: '0.1972109147567353',
++  //     p95: '0.9485230718057275',
++  //     p99: '0.9897046143611455',
++  //     total_requests: '863'
++  //   }
++  // ]
++  //
++  // return {
++  //   data: Dummy
++  // }
++
++  const url = `${env.PREDATOR_URL}/graphs/summary`;
++  return axios.post(url, {
++    test_id: testId,
++    report_id: reportId
++  }, {
++    headers: getAuthorizationHeader()
++  });
++};
++export const getGraphFromFramework = (body) => {
++  // const dummy = [{
++  //   metric: {},
++  //   values: [[1603628682, '18.635774583333337'], [1603628742, '20.022222222222222'], [1603628802, '20.011111111111113'], [1603628862, '20.022222222222222'], [1603628922, '20.022222222222222'], [1603628982, '20.022222222222222'], [1603629042, '20.022222222222222'], [1603629102, '17.022222222222222'], [1603629162, '28.44253916666667']]
++  // }]
++  //
++  // return {
++  //   data: dummy
++  // }
++
++  const url = `${env.PREDATOR_URL}/graphs/charts`;
++  return axios.post(url, body, {
++    headers: getAuthorizationHeader()
++  });
++};
++
+ export const getBenchmarkFromFramework = (testId) => {
+   const url = `${env.PREDATOR_URL}/tests/${testId}/benchmark`;
+   return axios.get(url, {
+Index: ui/src/features/components/Report/Charts.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/components/Report/Charts.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/components/Report/Charts.js	(date 1605641226473)
+@@ -1,250 +1,401 @@
+ import {
+-    Bar,
+-    BarChart,
+-    CartesianGrid,
+-    Legend,
+-    Line,
+-    LineChart,
+-    ResponsiveContainer,
+-    Tooltip,
+-    XAxis,
+-    YAxis
+-} from "recharts";
+-import React from "react";
+-import _ from "lodash";
+-import Checkbox from "../../../components/Checkbox/Checkbox";
+-import {ReactTableComponent, TableHeader} from "../../../components/ReactTable";
+-import PieChart from "../PieChart";
++  Bar,
++  BarChart,
++  CartesianGrid,
++  Legend,
++  Line,
++  LineChart,
++  ResponsiveContainer,
++  Tooltip,
++  XAxis,
++  YAxis
++} from 'recharts';
++import React, { useCallback, useState, PureComponent } from 'react';
++import _ from 'lodash';
++import Checkbox from '../../../components/Checkbox/Checkbox';
++import { ReactTableComponent, TableHeader } from '../../../components/ReactTable';
++import PieChart from '../PieChart';
++import Button from '../../../components/Button';
+ 
+-const COLORS = [{stroke: "#8884d8", fill: "#8884d8"},
+-    {stroke: "#82ca9d", fill: "#82ca9d"},
+-    {stroke: "#ffc658", fill: "#ffc658"},
+-    {stroke: "#0935FC", fill: "#0935FC"},
+-    {stroke: "#395B56", fill: "#395B56"},
+-    {stroke: "#617A70", fill: "#617A70"},
+-    {stroke: "#CCC39F", fill: "#CCC39F"},
+-    {stroke: "#827e5b", fill: "#827e5b"},
++const COLORS = [{ stroke: '#8884d8', fill: '#8884d8' },
++  { stroke: '#82ca9d', fill: '#82ca9d' },
++  { stroke: '#ffc658', fill: '#ffc658' },
++  { stroke: '#0935FC', fill: '#0935FC' },
++  { stroke: '#395B56', fill: '#395B56' },
++  { stroke: '#617A70', fill: '#617A70' },
++  { stroke: '#CCC39F', fill: '#CCC39F' },
++  { stroke: '#827e5b', fill: '#827e5b' }
+ ];
+ const COLOR_FAMILY = {
+-    p95: [{stroke: "#BBDEF0", fill: "#BBDEF0"}, {stroke: "#00A6A6", fill: "#00A6A6"}, {
+-        stroke: "#EFCA08",
+-        fill: "#EFCA08"
+-    }, {stroke: "#F49F0A", fill: "#F49F0A"}, {stroke: "#F08700", fill: "#F08700"}],
+-    p99: [{stroke: "#134611", fill: "#134611"}, {stroke: "#3E8914", fill: "#3E8914"}, {
+-        stroke: "#3DA35D",
+-        fill: "#3DA35D"
+-    }, {stroke: "#96E072", fill: "#96E072"}, {stroke: "#ACFC4B", fill: "#ACFC4B"}],
+-    median: [{stroke: "#353531", fill: "#353531"}, {stroke: "#EC4E20", fill: "#EC4E20"}, {
+-        stroke: "#FF9505",
+-        fill: "#FF9505"
+-    }, {stroke: "#016FB9", fill: "#016FB9"}, {stroke: "#000000", fill: "#000000"}]
++  p95: [{ stroke: '#BBDEF0', fill: '#BBDEF0' }, { stroke: '#00A6A6', fill: '#00A6A6' }, {
++    stroke: '#EFCA08',
++    fill: '#EFCA08'
++  }, { stroke: '#F49F0A', fill: '#F49F0A' }, { stroke: '#F08700', fill: '#F08700' }],
++  p99: [{ stroke: '#134611', fill: '#134611' }, { stroke: '#3E8914', fill: '#3E8914' }, {
++    stroke: '#3DA35D',
++    fill: '#3DA35D'
++  }, { stroke: '#96E072', fill: '#96E072' }, { stroke: '#ACFC4B', fill: '#ACFC4B' }],
++  median: [{ stroke: '#353531', fill: '#353531' }, { stroke: '#EC4E20', fill: '#EC4E20' }, {
++    stroke: '#FF9505',
++    fill: '#FF9505'
++  }, { stroke: '#016FB9', fill: '#016FB9' }, { stroke: '#000000', fill: '#000000' }]
+ };
+ const getColor = (key, index) => {
+-    const prefix = key.substring(0, 1);
+-    if (!(prefix.charCodeAt(0) >= 'A'.charCodeAt(0) && key.charAt(1) === '_')) {
+-        // its not with A_ prefix
+-        return COLORS[index % COLORS.length];
+-    }
++  const prefix = key.substring(0, 1);
++  if (!(prefix.charCodeAt(0) >= 'A'.charCodeAt(0) && key.charAt(1) === '_')) {
++    // its not with A_ prefix
++    return COLORS[index % COLORS.length];
++  }
+ 
+-    const name = key.substring(2);
+-    const family = COLOR_FAMILY[name] || COLORS;
+-    const loc = prefix.charCodeAt(0) - 'A'.charCodeAt(0);
+-    if (family) {
+-        return family[loc % family.length];
+-    }
+-    return COLORS[loc % COLORS.length];
++  const name = key.substring(2);
++  const family = COLOR_FAMILY[name] || COLORS;
++  const loc = prefix.charCodeAt(0) - 'A'.charCodeAt(0);
++  if (family) {
++    return family[loc % family.length];
++  }
++  return COLORS[loc % COLORS.length];
+ };
+ 
+ const filterKeysFromArrayOfObject = (data, graphType, filteredKeys) => {
+-    const keysToFilter = Object.keys(_.pickBy(filteredKeys[graphType] || {}, (value) => value));
+-    const filteredData = data.reduce((acc, cur) => {
+-        acc.push(_.omitBy(cur, (value, key) => {
+-            return keysToFilter.includes(`${key}`)
+-        }));
+-        return acc;
+-    }, []);
++  const keysToFilter = Object.keys(_.pickBy(filteredKeys[graphType] || {}, (value) => value));
++  const filteredData = data.reduce((acc, cur) => {
++    acc.push(_.omitBy(cur, (value, key) => {
++      return keysToFilter.includes(`${key}`)
++    }));
++    return acc;
++  }, []);
+ 
+-    return filteredData;
++  return filteredData;
+ };
+ 
+-export const BarChartPredator = ({data = [], keys = [], graphType, onSelectedGraphPropertyFilter, filteredKeys}) => {
+-    const filteredData = filterKeysFromArrayOfObject(data, graphType, filteredKeys);
++export const BarChartPredator = ({ data = [], keys = [], graphType, onSelectedGraphPropertyFilter, filteredKeys }) => {
++  const filteredData = filterKeysFromArrayOfObject(data, graphType, filteredKeys);
+ 
+-    return (
+-        <ResponsiveContainer width={'100%'} height={300}>
+-            <BarChart
+-                height={300}
+-                data={filteredData}
+-                margin={{
+-                    top: 20, right: 30, left: 20, bottom: 5,
+-                }}
+-            >
+-                <CartesianGrid strokeDasharray="3 3"/>
+-                <XAxis dataKey="name"/>
+-                <YAxis/>
+-                <Legend content={(props) => renderLegend({
+-                    ...props,
+-                    graphType,
+-                    onSelectedGraphPropertyFilter,
+-                    filteredKeys
+-                })}/>
+-                <Tooltip/>
+-                {
+-                    keys.map((key, index) => {
+-                        const color = getColor(key, index);
+-                        return (<Bar barSize={50} key={index} dataKey={key} fill={color.fill}/>)
+-                    })
+-                }
+-            </BarChart>
+-        </ResponsiveContainer>
+-    )
++  return (
++    <ResponsiveContainer width={'100%'} height={300}>
++      <BarChart
++        height={300}
++        data={filteredData}
++        margin={{
++          top: 20, right: 30, left: 20, bottom: 5
++        }}
++      >
++        <CartesianGrid strokeDasharray='3 3' />
++        <XAxis dataKey='name' />
++        <YAxis />
++        <Legend content={(props) => renderLegend({
++          ...props,
++          graphType,
++          onSelectedGraphPropertyFilter,
++          filteredKeys
++        })} />
++        <Tooltip />
++        {
++          keys.map((key, index) => {
++            const color = getColor(key, index);
++            return (<Bar barSize={50} key={index} dataKey={key} fill={color.fill} />)
++          })
++        }
++      </BarChart>
++    </ResponsiveContainer>
++  )
+ };
+ 
+-export const LineChartPredator = ({data = [], keys = [], labelY, graphType, onSelectedGraphPropertyFilter, filteredKeys, connectNulls = true}) => {
+-    const filteredData = filterKeysFromArrayOfObject(data, graphType, filteredKeys);
+-    return (
+-        <ResponsiveContainer width="100%" height={300}>
+-            <LineChart
+-                width={700}
+-                height={400}
+-                data={filteredData}
+-                margin={{
+-                    top: 10, right: 30, left: 0, bottom: 0,
+-                }}
+-            >
+-                <CartesianGrid strokeDasharray="3 3"/>
+-                <XAxis dataKey="name" allowDuplicatedCategory={false}/>
+-                <YAxis label={labelY} domain={[0, dataMax => Math.round(dataMax * 1.1)]}/>
+-                {/*<Legend content={(props) => renderLegend({*/}
+-                {/*    ...props,*/}
+-                {/*    graphType,*/}
+-                {/*    onSelectedGraphPropertyFilter,*/}
+-                {/*    filteredKeys*/}
+-                {/*})}/>*/}
+-                <Tooltip/>
+-                {
+-                    keys.map((key, index) => {
+-                        const color = getColor(key, index);
+-                        return (<Line connectNulls={connectNulls} key={index} type="monotone" dataKey={key} dot={null}
+-                                      stroke={color.stroke}/>)
+-                    })
+-                }
+-            </LineChart>
+-        </ResponsiveContainer>
+-    )
++export const LineChartPredator = ({ data = [], keys = [], labelY, graphType, onSelectedGraphPropertyFilter, filteredKeys, connectNulls = true }) => {
++  const filteredData = filterKeysFromArrayOfObject(data, graphType, filteredKeys);
++  return (
++    <ResponsiveContainer width='100%' height={300}>
++      <LineChart
++        width={700}
++        height={400}
++        data={filteredData}
++        margin={{
++          top: 10, right: 30, left: 0, bottom: 0
++        }}
++      >
++        <CartesianGrid strokeDasharray='3 3' />
++        <XAxis dataKey='name' allowDuplicatedCategory={false} />
++        <YAxis label={labelY} domain={[0, dataMax => Math.round(dataMax * 1.1)]} />
++        {/* <Legend content={(props) => renderLegend({ */}
++        {/*    ...props, */}
++        {/*    graphType, */}
++        {/*    onSelectedGraphPropertyFilter, */}
++        {/*    filteredKeys */}
++        {/* })}/> */}
++        <Tooltip />
++        {
++          keys.map((key, index) => {
++            const color = getColor(key, index);
++            return (<Line connectNulls={connectNulls} key={index} type='monotone' dataKey={key} dot={null}
++              stroke={color.stroke} />)
++          })
++        }
++      </LineChart>
++    </ResponsiveContainer>
++  )
+ }
+ 
+-
+ const renderLegend = (props) => {
+-    const {payload, onSelectedGraphPropertyFilter, graphType, filteredKeys} = props;
+-    if (payload.length === 1) {
+-        return null;
+-    }
+-    return (
+-        <div style={{
+-            display: 'flex',
+-            flexDirection: 'row',
+-            alignItems: 'center',
+-            justifyContent: 'center',
+-            flexWrap: 'wrap',
+-            flex: 1
+-        }}>
+-            {
+-                payload.map((entry, index) => (
+-                    <div key={`item-${index}`}
+-                         style={{margin: '5px', display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+-                        <Checkbox
+-                            indeterminate={false}
+-                            checked={_.get(filteredKeys, `${graphType}.${entry.value}`) === undefined || _.get(filteredKeys, `${graphType}.${entry.value}`) === false}
+-                            // disabled={}
+-                            onChange={(value) => {
+-                                onSelectedGraphPropertyFilter(graphType, entry.value, value)
+-                            }}
+-                        />
+-                        <span style={{marginLeft: '5px', color: entry.color}}>{entry.value}</span>
+-                    </div>
+-                ))
+-            }
+-        </div>
+-    );
++  const { payload, onSelectedGraphPropertyFilter, graphType, filteredKeys } = props;
++  if (payload.length === 1) {
++    return null;
++  }
++  return (
++    <div style={{
++      display: 'flex',
++      flexDirection: 'row',
++      alignItems: 'center',
++      justifyContent: 'center',
++      flexWrap: 'wrap',
++      flex: 1
++    }}>
++      {
++        payload.map((entry, index) => (
++          <div key={`item-${index}`}
++            style={{ margin: '5px', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
++            <Checkbox
++              indeterminate={false}
++              checked={_.get(filteredKeys, `${graphType}.${entry.value}`) === undefined || _.get(filteredKeys, `${graphType}.${entry.value}`) === false}
++              // disabled={}
++              onChange={(value) => {
++                onSelectedGraphPropertyFilter(graphType, entry.value, value)
++              }}
++            />
++            <span style={{ marginLeft: '5px', color: entry.color }}>{entry.value}</span>
++          </div>
++        ))
++      }
++    </div>
++  );
+ }
+ 
+-
+-export const AssertionsReport = ({data = {rows: [], headers: []}}) => {
+-    const columnNumberSize = 100;
++export const AssertionsReport = ({ data = { rows: [], headers: [] } }) => {
++  const columnNumberSize = 100;
+ 
+-    const columns = [
+-        {
+-            id: 'requestName',
+-            Header: () => (
+-                <TableHeader padding={'8px'} sortable={false}>
+-                    Request Name
+-                </TableHeader>
+-            ),
+-            accessor: data => data.assert_name,
+-        }, {
+-            id: 'assertion',
+-            Header: () => (
+-                <TableHeader padding={'8px'}  sortable={false}>
+-                    Assertion
+-                </TableHeader>
+-            ),
+-            accessor: data => data.assertion,
+-        },
+-        {
+-            id: 'fail',
+-            Header: () => (
+-                <TableHeader padding={'8px'}  sortable={false}>
+-                    Fail
+-                </TableHeader>
+-            ),
+-            accessor: data => data.fail,
+-            width: columnNumberSize
+-        }, {
+-            id: 'success',
+-            Header: () => (
+-                <TableHeader padding={'8px'}  sortable={false}>
+-                    Success
+-                </TableHeader>
+-            ),
+-            accessor: data => data.success,
+-            width: columnNumberSize
+-        }, {
+-            id: 'successRatio',
+-            Header: () => (
+-                <TableHeader padding={'8px'}  sortable={false}>
+-                    Success Ratio
+-                </TableHeader>
+-            ),
+-            accessor: data => data.success_ratio,
+-            width: columnNumberSize
+-        }, {
+-            id: 'failureResponses',
++  const columns = [
++    {
++      id: 'requestName',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Request Name
++        </TableHeader>
++      ),
++      accessor: data => data.assert_name
++    }, {
++      id: 'assertion',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Assertion
++        </TableHeader>
++      ),
++      accessor: data => data.assertion
++    },
++    {
++      id: 'fail',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Fail
++        </TableHeader>
++      ),
++      accessor: data => data.fail,
++      width: columnNumberSize
++    }, {
++      id: 'success',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Success
++        </TableHeader>
++      ),
++      accessor: data => data.success,
++      width: columnNumberSize
++    }, {
++      id: 'successRatio',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Success Ratio
++        </TableHeader>
++      ),
++      accessor: data => data.success_ratio,
++      width: columnNumberSize
++    }, {
++      id: 'failureResponses',
+ 
+-            Header: () => (
+-                <TableHeader padding={'8px'}  sortable={false}>
+-                    Failure responses
+-                </TableHeader>
+-            ),
+-            accessor: data => (
+-                    <PieChart width={300} height={100} data={data.failure_responses}/>
+-            ),
+-            width: 300,
+-        },
+-    ]
+-
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Failure responses
++        </TableHeader>
++      ),
++      accessor: data => (
++        <PieChart width={300} height={100} data={data.failure_responses} />
++      ),
++      width: 300
++    }
++  ]
+ 
+-    return (
+-        <ReactTableComponent
+-            style={{width: '100%'}}
+-            tdStyle={{display:'flex',alignItems:'center'}}
+-            manual={false}
+-            data={data.rows}
+-            columns={columns}
+-            noDataText={'noDataText'}
+-            showPagination={false}
+-            resizable={false}
+-            cursor={'default'}
+-        />
+-    );
++  return (
++    <ReactTableComponent
++      style={{ width: '100%' }}
++      tdStyle={{ display: 'flex', alignItems: 'center' }}
++      manual={false}
++      data={data.rows}
++      columns={columns}
++      noDataText={'noDataText'}
++      showPagination={false}
++      resizable={false}
++      cursor={'default'}
++    />
++  );
+ }
++
++export const TableSummery = ({ data, onSelectedRow, selectedRow }) => {
++  const columnNumberSize = 100;
++
++  const columns = [
++    {
++      id: 'requestName',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Request Name
++        </TableHeader>
++      ),
++      accessor: data => data.request_name
++
++    }, {
++      id: 'statusCode',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Status Code
++        </TableHeader>
++      ),
++      accessor: data => data.status_code,
++      width: columnNumberSize
++
++    },
++    {
++      id: 'p50',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          P50
++        </TableHeader>
++      ),
++      accessor: data => data.p50,
++      width: columnNumberSize
++    }, {
++      id: 'p95',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          P95
++        </TableHeader>
++      ),
++      accessor: data => data.p95,
++      width: columnNumberSize
++    }, {
++      id: 'p99',
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          P99
++        </TableHeader>
++      ),
++      accessor: data => data.p99,
++      width: columnNumberSize
++    }, {
++      id: 'totalRequests',
++
++      Header: () => (
++        <TableHeader padding={'8px'} sortable={false}>
++          Total Requests
++        </TableHeader>
++      ),
++      accessor: data => data.total_requests,
++      width: columnNumberSize
++    }
++  ]
++  return (
++    <ReactTableComponent
++      style={{ width: '100%' }}
++      tdStyle={{ display: 'flex', alignItems: 'center' }}
++      manual={false}
++      data={data}
++      selectRow={onSelectedRow}
++      selectedRow={selectedRow}
++      columns={columns}
++      noDataText={'noDataText'}
++      showPagination={false}
++      resizable={false}
++      cursor={'pointer'}
++    />
++  );
++}
++//
++// const latency = [{
++//   metric: {},
++//   values: [[1603628682, '0.030494223295586778'], [1603628742, '0.030681715575620744'], [1603628802, '0.030384269662921286'], [1603628862, '0.030523007856341107'], [1603628922, '0.030654668166479174'], [1603628982, '0.030585201793721963'], [1603629042, '0.03030614525139662'], [1603629102, '0.026110584518167466'], [1603629162, '0.5334297160455457']]
++// }]
++// const rps = [{
++//   metric: {},
++//   values: [[1603628682, '18.635774583333337'], [1603628742, '20.022222222222222'], [1603628802, '20.011111111111113'], [1603628862, '20.022222222222222'], [1603628922, '20.022222222222222'], [1603628982, '20.022222222222222'], [1603629042, '20.022222222222222'], [1603629102, '17.022222222222222'], [1603629162, '28.44253916666667']]
++// }]
++// const values = latency[0].values;
++// console.log('values', values)
++// const data = []
++//
++// for (let i = 0; i < values.length; i++) {
++//   data.push({
++//     name: values[i][0],
++//     p95: latency[0].values[i][1],
++//     rps: rps[0].values[i][1]
++//   })
++// }
++
++// const data = [
++//   {
++//     name: 'Page A', uv: 4000, pv: 2400, amt: 2400
++//   },
++//   {
++//     name: 'Page B', uv: 3000, pv: 1398, amt: 2210
++//   },
++//   {
++//     name: 'Page C', uv: 2000, pv: 9800, amt: 2290
++//   }
++// ];
++// console.log('data', data)
++
++export const BiaxialLineChart = ({ data = [], labelLeft, labelRight, keysLeft = [], keysRight = [] }) => {
++  return (
++
++    <ResponsiveContainer width='100%' height={300}>
++      <LineChart
++        width={500}
++        height={300}
++        data={data}
++        margin={{
++          top: 5, right: 30, left: 20, bottom: 5
++        }}
++      >
++        <CartesianGrid strokeDasharray='3 3' />
++        <XAxis dataKey='name' />
++        <YAxis label={{ value: labelLeft, position: 'outsideLeft', angle: '-90' }} yAxisId='left' />
++        <YAxis label={{ value: labelRight, position: 'insideRight' }} yAxisId='right' orientation='right' />
++        <Tooltip />
++        {/*<Legend />*/}
++        {/* <Line yAxisId='left' type='monotone' dataKey='p95' stroke='#8884d8' activeDot={{ r: 8 }} /> */}
++        {
++          keysLeft.map((key, index) => {
++            const color = getColor(key, index);
++            return (<Line yAxisId='left' type='monotone' dataKey={key} stroke={color.stroke} />
++            )
++          })
++        }
++        {
++          keysRight.map((key, index) => {
++            const color = getColor(key, index);
++            return (<Line yAxisId='right' type='monotone' dataKey={key} stroke={color.stroke} />
++            )
++          })
++        }
++
++      </LineChart>
++    </ResponsiveContainer>
++
++  );
++}
+Index: ui/package-lock.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/package-lock.json	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/package-lock.json	(date 1605641226467)
+@@ -8561,6 +8561,11 @@
+         "object.assign": "^4.1.0"
+       }
+     },
++    "jwt-decode": {
++      "version": "3.1.1",
++      "resolved": "https://registry.npmjs.org/jwt-decode/-/jwt-decode-3.1.1.tgz",
++      "integrity": "sha512-EaH9dTD9ogCmxZRdiTsIUIJslqjoFfk8nEAi+Bq8u/aUjrVuhZ6eZjhWRH6SC9NBA0Lwr3K35H2zDnWvK/n4vQ=="
++    },
+     "keycode": {
+       "version": "2.2.0",
+       "resolved": "https://registry.npmjs.org/keycode/-/keycode-2.2.0.tgz",
+@@ -14116,11 +14121,6 @@
+         "lodash": "^4.17.15"
+       }
+     },
+-    "webpack-node-externals": {
+-      "version": "2.5.2",
+-      "resolved": "https://registry.npmjs.org/webpack-node-externals/-/webpack-node-externals-2.5.2.tgz",
+-      "integrity": "sha512-aHdl/y2N7PW2Sx7K+r3AxpJO+aDMcYzMQd60Qxefq3+EwhewSbTBqNumOsCE1JsCUNoyfGj5465N0sSf6hc/5w=="
+-    },
+     "webpack-sources": {
+       "version": "1.4.3",
+       "resolved": "https://registry.npmjs.org/webpack-sources/-/webpack-sources-1.4.3.tgz",
+Index: ui/src/components/ReactTable/ReactTable.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/components/ReactTable/ReactTable.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/components/ReactTable/ReactTable.js	(date 1605641226470)
+@@ -8,225 +8,248 @@
+ import 'react-table/react-table.css'
+ import NumericPagination from './NumericPagination/NumericPagination'
+ import SearchBar from '../SearchBar'
++import {v4 as uuid} from 'uuid';
+ 
+ export default class ReactTableComponent extends React.Component {
+-    constructor(props) {
+-        super(props)
+-        this.state = {
+-            selectedRow: null,
+-            sortByColumn: props.sortByColumn,
+-            sortDir: props.sortDir
+-        }
+-    }
++  constructor (props) {
++    super(props)
++    this.state = {
++      // selectedRow: {},
++      sortByColumn: props.sortByColumn,
++      sortDir: props.sortDir
++    }
++    this.child = React.createRef();
++  }
+ 
+-    componentDidUpdate(prevProps) {
+-        if (!isEqual(prevProps.data, this.props.data) && this.state.selectedRow && !this.props.selectedRow) {
+-            this.setState({
+-                selectedRow: null
+-            })
+-        }
+-    }
++  componentDidUpdate (prevProps) {
++    if (prevProps.selectedRow !== this.props.selectedRow) {
++      // console.log('here!!',this.child)
++      // this.child.forceUpdate();
++      // this.forceUpdate()
++    }
++
++    // if (!isEqual(prevProps.data, this.props.data) && this.state.selectedRow && !this.props.selectedRow) {
++    //   // this.setState({
++    //   //   selectedRow: {}
++    //   // })
++    //   //   this.forceUpdate()
++    // }
++  }
+ 
+     static getDerivedStateFromProps = (nextProps, prevState) => {
+-        if (nextProps.selectedRow !== undefined) {
+-            return ({
+-                ...prevState,
+-                selectedRow: nextProps.selectedRow
+-            })
+-        } else {
+-            return null
+-        }
++      if (nextProps.selectedRow !== undefined) {
++        return ({
++          ...prevState
++          // selectedRow: nextProps.selectedRow
++        })
++      } else {
++        return null
++      }
+     }
+ 
+-    render() {
+-        const {
+-            data,
+-            noDataText,
+-            columns,
+-            loading,
+-            selectRow,
+-            sortEvent,
+-            sortByColumn,
+-            sortDir,
+-            showPagination,
+-            resizable,
+-            pages,
+-            onPageChange,
+-            pageSize,
+-            page,
+-            manual,
+-            totalDataCount,
+-            className,
+-            bodyProps,
+-            cursor,
+-            colors,
+-            numericPagination,
+-            tableRowId,
+-            rowHeight,
+-            onRowEnter,
+-            onRowLeave,
+-            cellPadding,
+-            onSearch,
+-            tdStyle,
+-            style: customStyle,
+-            searchSections,
+-        } = this.props
+-        const backgroundColors = Object.assign({}, ReactTableComponent.defaultProps.colors.background, colors.background)
+-        const textColors = Object.assign({}, ReactTableComponent.defaultProps.colors.text, colors.text)
+-        const headerColors = Object.assign({}, ReactTableComponent.defaultProps.colors.header, colors.header)
++    render () {
++      /*
++      *
++      * TODO make row to render after select, currently its hard coded row key
++      * */
++      const {
++        data,
++        noDataText,
++        columns,
++        loading,
++        selectRow,
++        sortEvent,
++        sortByColumn,
++        sortDir,
++        showPagination,
++        resizable,
++        pages,
++        onPageChange,
++        pageSize,
++        page,
++        manual,
++        totalDataCount,
++        className,
++        bodyProps,
++        cursor,
++        colors,
++        numericPagination,
++        tableRowId,
++        rowHeight,
++        onRowEnter,
++        onRowLeave,
++        cellPadding,
++        onSearch,
++        tdStyle,
++        style: customStyle,
++        searchSections,
++        selectedRow
++      } = this.props
++      const backgroundColors = Object.assign({}, ReactTableComponent.defaultProps.colors.background, colors.background)
++      const textColors = Object.assign({}, ReactTableComponent.defaultProps.colors.text, colors.text)
++      const headerColors = Object.assign({}, ReactTableComponent.defaultProps.colors.header, colors.header)
+ 
+-        return (
+-            <div style={customStyle}>
+-                {onSearch && <SearchBar searchSections={searchSections} onSearch={onSearch} />}
+-                <ReactTable
+-                    data={data}
+-                    className={classnames(css['table'], className, '-striped', '-highlight')}
+-                    columns={columns}
+-                    loading={loading}
+-                    pages={pages}
+-                    page={page}
+-                    manual={manual}
+-                    onPageChange={onPageChange}
+-                    showPagination={showPagination}
+-                    sortable={false}
+-                    PaginationComponent={numericPagination ? NumericPagination : PaginationComponent}
+-                    pageSize={pageSize}
+-                    resizable={resizable}
+-                    minRows={data.length ? pageSize || 0 : 5}
+-                    totalDataCount={totalDataCount}
+-                    noDataText={noDataText || 'There is no data'}
+-                    getTheadProps={() => ({
+-                        style: { '--header-color': headerColors.default },
+-                        className: css['thead']
+-                    })}
+-                    getTbodyProps={() => ({ ...bodyProps, className: css['tbody'] })}
+-                    getTheadThProps={(state, rowInfo, column, instance) => ({
+-                        className: css['th'],
+-                        style: { '--cursor': cursor },
+-                        onClick: e => {
+-                            if (sortEvent) {
+-                                sortEvent(column.id)
+-                                this.setState({
+-                                    sortByColumn: column.id,
+-                                    sortDir: sortDir === '-' && sortByColumn === column.id ? '+' : '-'
+-                                })
+-                            }
+-                        }
+-                    })}
+-                    getTdProps={() => ({
+-                        className: [css['td'], !rowHeight && css['td--autoheight']].join(' '),
+-                        style: {
+-                            '--row-height': rowHeight,
+-                            '--cell-side-padding': cellPadding,
+-                            ...tdStyle
+-                        }
+-                    })}
+-                    getTrGroupProps={() => ({
+-                        className: css['tr-group']
+-                    })}
+-                    getTrProps={(state, rowInfo, column, instance) => {
+-                        if (!rowInfo) return false
+-                        const isSelected = rowInfo.row[tableRowId] === this.state.selectedRow
+-                        return {
+-                            onClick: e => {
+-                                if (selectRow) {
+-                                    this.setState({
+-                                        selectedRow: rowInfo.row[tableRowId] === this.state.selectedRow ? null : rowInfo.row[tableRowId]
+-                                    })
+-                                    selectRow(rowInfo.row[tableRowId] === this.state.selectedRow ? null : rowInfo.row[tableRowId])
+-                                }
+-                            },
+-                            className: classnames(css['tr'], {
+-                                [css['tr--autoheight']]: !rowHeight,
+-                                [css['tr--selected']]: isSelected
+-                            }),
+-                            onMouseEnter: onRowEnter ? () => onRowEnter(rowInfo.row) : undefined,
+-                            onMouseLeave: onRowLeave ? () => onRowLeave(rowInfo.row) : undefined,
+-                            style: {
+-                                '--cursor': cursor,
+-                                '--row-height': rowHeight,
+-                                '--background-default': backgroundColors.default,
+-                                '--background-selected': backgroundColors.selected,
+-                                '--text-default': textColors.default,
+-                                '--text-selected': textColors.selected
+-                            }
+-                        }
+-                    }} />
+-            </div>
+-        )
++      return (
++        <div style={customStyle}>
++          {onSearch && <SearchBar searchSections={searchSections} onSearch={onSearch} />}
++          <ReactTable
++              // key={uuid()}
++            data={data}
++            className={classnames(css['table'], className)}
++            columns={columns}
++            loading={loading}
++            pages={pages}
++            page={page}
++            manual={manual}
++            onPageChange={onPageChange}
++            showPagination={showPagination}
++            sortable={false}
++            PaginationComponent={numericPagination ? NumericPagination : PaginationComponent}
++            pageSize={pageSize}
++            resizable={resizable}
++            minRows={data.length ? pageSize || 0 : 5}
++            totalDataCount={totalDataCount}
++            noDataText={noDataText || 'There is no data'}
++            getTheadProps={() => ({
++              style: { '--header-color': headerColors.default },
++              className: css['thead']
++            })}
++            getTbodyProps={() => ({ ...bodyProps, className: css['tbody'] })}
++            getTheadThProps={(state, rowInfo, column, instance) => ({
++              className: css['th'],
++              style: { '--cursor': cursor },
++              onClick: e => {
++                if (sortEvent) {
++                  sortEvent(column.id)
++                  this.setState({
++                    sortByColumn: column.id,
++                    sortDir: sortDir === '-' && sortByColumn === column.id ? '+' : '-'
++                  })
++                }
++              }
++            })}
++            getTdProps={() => ({
++              className: [css['td'], !rowHeight && css['td--autoheight']].join(' '),
++              style: {
++                '--row-height': rowHeight,
++                '--cell-side-padding': cellPadding,
++                ...tdStyle
++              }
++            })}
++            getTrGroupProps={() => ({
++              className: css['tr-group']
++            })}
++            getTrProps={(state, rowInfo, column, instance) => {
++              if (!rowInfo) return false
++              // console.log('row info', rowInfo)
++              // console.log('row instance', instance)
++              const key = data[rowInfo.index][tableRowId];
++              const isSelected = selectedRow[key]
++              return {
++                onClick: e => {
++                  if (selectRow) {
++                    // this.setState({
++                    //     selectedRow: rowInfo.row[tableRowId] === this.state.selectedRow ? null : rowInfo.row[tableRowId]
++                    // })
++                    // })
++                    // const key = data[rowInfo.index][tableRowId];
++                    selectRow(rowInfo.original, !selectedRow[key])
++                    // instance.forceUpdate()
++                  //    give it as callback ? todo
++                  }
++                },
++                className: classnames(css['tr'], {
++                  [css['tr--autoheight']]: !rowHeight,
++                  [css['tr--selected']]: isSelected
++                }),
++                onMouseEnter: onRowEnter ? () => onRowEnter(rowInfo.row) : undefined,
++                onMouseLeave: onRowLeave ? () => onRowLeave(rowInfo.row) : undefined,
++                style: {
++                  '--cursor': cursor,
++                  '--row-height': rowHeight,
++                  '--background-default': backgroundColors.default,
++                  '--background-selected': backgroundColors.selected,
++                  '--text-default': textColors.default,
++                  '--text-selected': textColors.selected
++                },
++                selectedRow
++              }
++            }} />
++        </div>
++      )
+     }
+ }
+ 
+ ReactTableComponent.propTypes = {
+-    data: PropTypes.array,
+-    columns: PropTypes.array,
+-    loading: PropTypes.bool,
+-    manual: PropTypes.bool,
+-    pageSize: PropTypes.number,
+-    totalDataCount: PropTypes.number,
+-    onRowEnter: PropTypes.func,
+-    onRowLeave: PropTypes.func,
+-    selectRow: PropTypes.func,
+-    selectedRow: PropTypes.any,
+-    sortEvent: PropTypes.func,
+-    onPageChange: PropTypes.func,
+-    sortByColumn: PropTypes.string,
+-    className: PropTypes.string,
+-    showPagination: PropTypes.bool,
+-    pages: PropTypes.number,
+-    page: PropTypes.number,
+-    resizable: PropTypes.bool,
+-    sortDir: PropTypes.string,
+-    bodyProps: PropTypes.object,
+-    cursor: PropTypes.string,
+-    cellPadding: PropTypes.string,
+-    tableRowId: PropTypes.string,
+-    rowHeight: PropTypes.string,
+-    colors: PropTypes.shape({
+-        background: PropTypes.shape({
+-            default: PropTypes.string,
+-            selected: PropTypes.string
+-        }),
+-        text: PropTypes.shape({
+-            default: PropTypes.string,
+-            selected: PropTypes.string
+-        }),
+-        header: PropTypes.shape({
+-            default: PropTypes.string
+-        })
+-    })
++  data: PropTypes.array,
++  columns: PropTypes.array,
++  loading: PropTypes.bool,
++  manual: PropTypes.bool,
++  pageSize: PropTypes.number,
++  totalDataCount: PropTypes.number,
++  onRowEnter: PropTypes.func,
++  onRowLeave: PropTypes.func,
++  selectRow: PropTypes.func,
++  selectedRow: PropTypes.any,
++  sortEvent: PropTypes.func,
++  onPageChange: PropTypes.func,
++  sortByColumn: PropTypes.string,
++  className: PropTypes.string,
++  showPagination: PropTypes.bool,
++  pages: PropTypes.number,
++  page: PropTypes.number,
++  resizable: PropTypes.bool,
++  sortDir: PropTypes.string,
++  bodyProps: PropTypes.object,
++  cursor: PropTypes.string,
++  cellPadding: PropTypes.string,
++  tableRowId: PropTypes.string,
++  rowHeight: PropTypes.string,
++  colors: PropTypes.shape({
++    background: PropTypes.shape({
++      default: PropTypes.string,
++      selected: PropTypes.string
++    }),
++    text: PropTypes.shape({
++      default: PropTypes.string,
++      selected: PropTypes.string
++    }),
++    header: PropTypes.shape({
++      default: PropTypes.string
++    })
++  })
+ 
+ }
+ 
+ ReactTableComponent.defaultProps = {
+-    data: [],
+-    selectedRow: undefined,
+-    pageSize: undefined,
+-    manual: true, // change to false
+-    columns: [],
+-    bodyProps: {},
+-    sortByColumn: 'created',
+-    sortDir: '-',
+-    showPagination: true,
+-    pages: undefined,
+-    cursor: 'pointer',
+-    page: undefined,
+-    totalDataCount: undefined, // only needed for manual and pagination
+-    resizable: true,
+-    tableRowId: 'id',
+-    rowHeight: null,
+-    cellPadding: '8px',
+-    colors: {
+-        background: {
+-            default: '#fff',
+-            selected: '#108ee9'
+-        },
+-        text: {
+-            default: '#000',
+-            selected: '#fff'
+-        },
+-        header: {
+-            default: '#108ee9'
+-        }
+-    }
++  data: [],
++  selectedRow: {},
++  pageSize: undefined,
++  manual: true, // change to false
++  columns: [],
++  bodyProps: {},
++  sortByColumn: 'created',
++  sortDir: '-',
++  showPagination: true,
++  pages: undefined,
++  cursor: 'pointer',
++  page: undefined,
++  totalDataCount: undefined, // only needed for manual and pagination
++  resizable: true,
++  tableRowId: 'id',
++  rowHeight: null,
++  cellPadding: '8px',
++  colors: {
++    background: {
++      default: '#fff',
++      selected: '#108ee9'
++    },
++    text: {
++      default: '#000',
++      selected: '#fff'
++    },
++    header: {
++      default: '#108ee9'
++    }
++  }
+ }
+Index: ui/package.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/package.json	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/package.json	(date 1605641226468)
+@@ -88,6 +88,7 @@
+     "font-awesome": "^4.7.0",
+     "history": "^4.10.1",
+     "immutable": "^3.8.2",
++    "jwt-decode": "^3.1.1",
+     "lodash": "^4.17.20",
+     "material-ui": "^0.20.0",
+     "moment": "^2.29.0",
+Index: ui/src/features/components/Report/index.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- ui/src/features/components/Report/index.js	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ ui/src/features/components/Report/index.js	(date 1605641226475)
+@@ -9,7 +9,7 @@
+ import dateFormat from 'dateformat';
+ import Button from '../../../components/Button';
+ import Snackbar from 'material-ui/Snackbar';
+-import { BarChartPredator, LineChartPredator, AssertionsReport } from './Charts';
++import { BarChartPredator, LineChartPredator, AssertionsReport, TableSummery, BiaxialLineChart } from './Charts';
+ import _ from 'lodash';
+ import Checkbox from '../../../components/Checkbox/Checkbox';
+ import Card from '../../../components/Card';
+@@ -21,6 +21,7 @@
+ import Tooltip from '../../../components/Tooltip/Tooltip.export';
+ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+ import MickeyLoading from '../../../components/MickeyLoading';
++import CloudGraph from "./CloudGraph";
+ 
+ const REFRESH_DATA_INTERVAL = 30000;
+ const LOADING_STATUSES = [
+@@ -32,6 +33,49 @@
+ ];
+ 
+ const TEST_FAIL_ERROR = 'The test failed, there is no data to present. Please check test logs';
++const Dummy = [
++  {
++    request_name: 'google',
++    status_code: '429',
++    p50: '0.03103548739899216',
++    p95: '0.04996742605808511',
++    p99: '0.16504842883322018',
++    total_requests: '863'
++  },
++  {
++    request_name: 'GET http://www.google.com/dasasdasdasd',
++    status_code: '404',
++    p50: '0.005001761777446654',
++    p95: '0.009503347377148641',
++    p99: '0.009903488319344374',
++    total_requests: '5691'
++  },
++  {
++    request_name: 'google',
++    status_code: '200',
++    p50: '0.0303518147405923',
++    p95: '0.048668448007125366',
++    p99: '0.10860000000000185',
++    total_requests: '4839'
++  },
++  {
++    request_name: 'google',
++    status_code: '302',
++    p50: '0.1972109147567353',
++    p95: '0.9485230718057275',
++    p99: '0.9897046143611455',
++    total_requests: '863'
++  }
++]
++  .map((data) => {
++    return {
++      ...data,
++      p50: Math.floor(data.p50 * 1000),
++      p95: Math.floor(data.p95 * 1000),
++      p99: Math.floor(data.p99 * 1000),
++      id: `${data.request_name}_${data.status_code}`
++    }
++  })
+ 
+ class Report extends React.Component {
+   constructor (props) {
+@@ -53,6 +97,7 @@
+       passedTime: (new Date().getTime() - new Date(props.report.start_time).getTime()) / 1000
+     }
+   }
++
+     isLoadingMode = (reportStatus) => {
+       return ['initializing', 'started'].includes(reportStatus)
+     }
+@@ -102,7 +147,10 @@
+             justifyContent: 'space-between',
+             alignItems: 'center'
+           }}>
+-            <h1 style={{ marginTop: '0px', minWidth: '310px' }}>{report.test_name.charAt(0).toUpperCase() + report.test_name.slice(1)}</h1>
++            <h1 style={{
++              marginTop: '0px',
++              minWidth: '310px'
++            }}>{report.test_name.charAt(0).toUpperCase() + report.test_name.slice(1)}</h1>
+             <SummeryTable report={report} />
+           </div>
+           <span>Started at {dateFormat(new Date(report.start_time), 'dddd, mmmm dS, yyyy, h:MM:ss TT')}</span>
+@@ -141,90 +189,97 @@
+                 }} icon={isFavorite ? fullStar : emptyStar} iconSize={'25px'} />
+               </div>
+               <div>
+-                <Button style={{ padding: '0px 5px', marginRight: '5px' }} hover disabled={report.status !== 'finished'}
++                <Button style={{ padding: '0px 5px', marginRight: '5px' }} hover
++                  disabled={report.status !== 'finished'}
+                   onClick={this.exportCSV}>Export to CSV</Button>
+-                <Button style={{ padding: '0px 5px' }}hover disabled={disabledCreateBenchmark || report.status !== 'finished'}
++                <Button style={{ padding: '0px 5px' }} hover
++                  disabled={disabledCreateBenchmark || report.status !== 'finished'}
+                   onClick={this.createBenchmark}>Set as Benchmark</Button>
+               </div>
+             </div>
+             {
+               (loadingMode &&
+-                <div style={{ marginTop: '60px', width: '65%', alignSelf: 'center' }}>
+-                  <MickeyLoading statuses={LOADING_STATUSES} passedTime={passedTime} fastFinish={finishLoadingMode}
+-                    onFinish={() => this.setState({ loadingMode: false, finishLoadingMode: false })} />
++              <div style={{ marginTop: '60px', width: '65%', alignSelf: 'center' }}>
++                <MickeyLoading timeInSec={120} statuses={LOADING_STATUSES} passedTime={passedTime}
++                  fastFinish={finishLoadingMode}
++                  onFinish={() => this.setState({
++                    loadingMode: false,
++                    finishLoadingMode: false
++                  })} />
+ 
+-                </div>) ||
+-              (report.status === 'failed' && <div style={{ marginTop: '10px', alignSelf: 'center' }}>{TEST_FAIL_ERROR}</div>) ||
+-              <>
+-                <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
+-                  <h3>prometheus</h3>
+-                  <LineChartPredator data={prometheusData.values} keys={prometheusData.keys}
+-                    labelY={'ms'} graphType={'latency'}
+-                    onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
+-                    filteredKeys={filteredKeys} />
+-                </Card>
+-                <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
+-                  <h3>Overall Latency</h3>
+-                  <LineChartPredator data={aggregateReport.latencyGraph} keys={aggregateReport.latencyGraphKeys}
+-                    labelY={'ms'} graphType={'latency'}
+-                    onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
+-                    filteredKeys={filteredKeys} />
+-                </Card>
+-                <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
+-                  <h3>Status Codes</h3>
+-                  <LineChartPredator data={aggregateReport.errorsCodeGraph}
+-                    keys={aggregateReport.errorsCodeGraphKeys}
+-                    graphType={'status_codes'}
+-                    connectNulls={false}
+-                    onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
+-                    filteredKeys={filteredKeys} />
+-                </Card>
++              </div>) ||
++                        (report.status === 'failed' &&
++                        <div style={{ marginTop: '10px', alignSelf: 'center' }}>{TEST_FAIL_ERROR}</div>) ||
++                        <>
++
++                          <CloudGraph report={report} />
++
++
++                          <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++                            <h3>Overall Latency</h3>
++                            <LineChartPredator data={aggregateReport.latencyGraph}
++                              keys={aggregateReport.latencyGraphKeys}
++                              labelY={'ms'} graphType={'latency'}
++                              onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
++                              filteredKeys={filteredKeys} />
++                          </Card>
++                          <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++                            <h3>Status Codes</h3>
++                            <LineChartPredator data={aggregateReport.errorsCodeGraph}
++                              keys={aggregateReport.errorsCodeGraphKeys}
++                              graphType={'status_codes'}
++                              connectNulls={false}
++                              onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
++                              filteredKeys={filteredKeys} />
++                          </Card>
+ 
+-                <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
+-                  <h3>RPS</h3>
+-                  <LineChartPredator data={aggregateReport.rps} keys={aggregateReport.rpsKeys} labelY={'rps'}
+-                    graphType={'rps'}
+-                    onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
+-                    filteredKeys={filteredKeys} />
+-                </Card>
+-                <Card style={{
+-                  display: 'flex',
+-                  marginBottom: '15px',
+-                  justifyContent: 'space-evenly',
+-                  height: '470px'
+-                }}>
+-                  <div style={{
+-                    display: 'flex',
+-                    flexDirection: 'column',
+-                    justifyContent: 'space-between',
+-                    height: '100%',
+-                    marginRight: '10px',
+-                    flex: 1
+-                  }}>
+-                    <h3>Status Codes And Errors Distribution</h3>
+-                    <BarChartPredator data={aggregateReport.errorsBar} keys={aggregateReport.errorsBarKeys}
+-                      graphType={'status_codes_errors'}
+-                      onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
+-                      filteredKeys={filteredKeys} />
+-                  </div>
+-                  <div style={{
+-                    display: 'flex',
+-                    flexDirection: 'column',
+-                    justifyContent: 'space-between',
+-                    height: '100%'
+-                  }}>
+-                    <h3>Scenarios</h3>
+-                    <PieChart data={aggregateReport.scenarios} />
+-                  </div>
+-                </Card>
+-                {
+-                  (aggregateReport.assertionsTable && aggregateReport.assertionsTable.rows.length) > 0 &&
+-                  <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
+-                    <h3>Assertions</h3>
+-                    <AssertionsReport data={aggregateReport.assertionsTable} />
+-                  </Card>
+-                }
+-                </>
++                          <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++                            <h3>RPS</h3>
++                            <LineChartPredator data={aggregateReport.rps} keys={aggregateReport.rpsKeys}
++                              labelY={'rps'}
++                              graphType={'rps'}
++                              onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
++                              filteredKeys={filteredKeys} />
++                          </Card>
++                          <Card style={{
++                            display: 'flex',
++                            marginBottom: '15px',
++                            justifyContent: 'space-evenly',
++                            height: '470px'
++                          }}>
++                            <div style={{
++                              display: 'flex',
++                              flexDirection: 'column',
++                              justifyContent: 'space-between',
++                              height: '100%',
++                              marginRight: '10px',
++                              flex: 1
++                            }}>
++                              <h3>Status Codes And Errors Distribution</h3>
++                              <BarChartPredator data={aggregateReport.errorsBar}
++                                keys={aggregateReport.errorsBarKeys}
++                                graphType={'status_codes_errors'}
++                                onSelectedGraphPropertyFilter={this.onSelectedGraphPropertyFilter}
++                                filteredKeys={filteredKeys} />
++                            </div>
++                            <div style={{
++                              display: 'flex',
++                              flexDirection: 'column',
++                              justifyContent: 'space-between',
++                              height: '100%'
++                            }}>
++                              <h3>Scenarios</h3>
++                              <PieChart data={aggregateReport.scenarios} />
++                            </div>
++                          </Card>
++                          {
++                            (aggregateReport.assertionsTable && aggregateReport.assertionsTable.rows.length) > 0 &&
++                            <Card style={{ display: 'flex', flexDirection: 'column', marginBottom: '15px' }}>
++                              <h3>Assertions</h3>
++                              <AssertionsReport data={aggregateReport.assertionsTable} />
++                            </Card>
++                          }
++                        </>
+ 
+             }
+ 
+@@ -284,12 +339,14 @@
+     width: columnWidth,
+     whiteSpace: 'nowrap',
+     overflow: 'hidden',
+-    textOverflow: 'ellipsis' }}>{children}</div>
++    textOverflow: 'ellipsis'
++  }}>{children}</div>
+ 
+   const rows = report.subscribers.map((runner, index) => {
+     const rps = ['first_intermediate', 'intermediate'].includes(runner.phase_status) ? runner.last_stats.rps.mean : 'N/A';
+     return [
+-      <ColumnWrapper>{index + 1}</ColumnWrapper>, <ColumnWrapper>{prettierStatus(runner.phase_status)}</ColumnWrapper>, <ColumnWrapper>{rps}</ColumnWrapper>
++      <ColumnWrapper>{index + 1}</ColumnWrapper>,
++      <ColumnWrapper>{prettierStatus(runner.phase_status)}</ColumnWrapper>, <ColumnWrapper>{rps}</ColumnWrapper>
+     ]
+   })
+   if (report.subscribers.length < report.parallelism) {
+@@ -297,7 +354,8 @@
+     let index = report.subscribers.length;
+     for (let i = 0; i < notStartedCount; i++) {
+       rows.push(
+-        [<ColumnWrapper>{index + 1}</ColumnWrapper>, <ColumnWrapper>Not Started</ColumnWrapper>, <ColumnWrapper>N/A</ColumnWrapper>]
++        [<ColumnWrapper>{index + 1}</ColumnWrapper>, <ColumnWrapper>Not Started</ColumnWrapper>,
++          <ColumnWrapper>N/A</ColumnWrapper>]
+       )
+     }
+   }
+@@ -306,7 +364,8 @@
+     return (
+       <div>
+         <SimpleTable
+-          headers={[<ColumnWrapper>Runner</ColumnWrapper>, <ColumnWrapper>Status</ColumnWrapper>, <ColumnWrapper>RP/S</ColumnWrapper>]} rows={rows} />
++          headers={[<ColumnWrapper>Runner</ColumnWrapper>, <ColumnWrapper>Status</ColumnWrapper>,
++            <ColumnWrapper>RP/S</ColumnWrapper>]} rows={rows} />
+       </div>
+     )
+   }
+@@ -318,7 +377,7 @@
+         rightComponent={
+ 
+           <div style={{ alignSelf: 'flex-end', marginBottom: '5px' }}>
+-            <Tooltip content={TooltipContent()} >
++            <Tooltip content={TooltipContent()}>
+               <FontAwesomeIcon style={{ cursor: 'pointer', color: '#0d47ff' }} icon={faInfo} size='10px' />
+             </Tooltip>
+ 
+Index: package.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- package.json	(revision 5667d4637ff33c3b1345f9ef3e6f075ede9b2f26)
++++ package.json	(date 1605641226461)
+@@ -98,11 +98,6 @@
+     "supertest": "^3.4.2",
+     "yaml": "^1.10.0"
+   },
+-  "husky": {
+-    "hooks": {
+-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+-    }
+-  },
+   "config": {
+     "commitizen": {
+       "path": "./node_modules/cz-conventional-changelog"
