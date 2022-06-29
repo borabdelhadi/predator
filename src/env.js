@@ -42,7 +42,7 @@ env.init = function () {
     if (process.env.DATABASE_TYPE) {
         mandatoryVars = mandatoryVars.concat(BY_DATABASE_MANDATORY_VARS[String(process.env.DATABASE_TYPE).toUpperCase()]);
     }
-
+// this is a new comment
     const missingFields = mandatoryVars.filter((currVar) => {
         return !process.env[currVar];
     });
