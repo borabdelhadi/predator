@@ -1,0 +1,8 @@
+job:
+  stage: job
+  script: echo "Hello, Rules!"
+  tags:
+    - eks-dev-build
+  rules:
+    - if: $CI_COMMIT_BRANCH
+#       when: manual
